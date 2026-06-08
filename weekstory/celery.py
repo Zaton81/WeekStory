@@ -20,12 +20,12 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     # Publish scheduled posts every 5 minutes
     'publish-scheduled-posts': {
-        'task': 'apps.social.tasks.publish_scheduled_posts',
+        'task': 'apps.social_posts.tasks.publish_scheduled_posts',
         'schedule': crontab(minute='*/5'),
     },
     # Clean up old AI model inference logs daily at 2 AM
     'cleanup-inference-logs': {
-        'task': 'apps.ai.tasks.cleanup_old_logs',
+        'task': 'apps.ai_models.tasks.cleanup_old_logs',
         'schedule': crontab(hour=2, minute=0),
     },
 }

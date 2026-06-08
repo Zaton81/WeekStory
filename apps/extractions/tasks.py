@@ -45,7 +45,7 @@ def extract_story_text_task(self, story_id):
         }
         
         # Save extraction
-        TextExtraction.objects.update_or_create(
+        extraction, created = TextExtraction.objects.update_or_create(
             story=story,
             defaults={
                 'extracted_text': extraction_result['extracted_text'],
@@ -65,7 +65,7 @@ def extract_story_text_task(self, story_id):
         
         # Trigger social post generation
         from apps.social_posts.tasks import generate_social_posts_task
-        generate_social_posts_task.delay(story.extraction.id)
+        generate_social_posts_task.delay(extraction.id)
         
         logger.info(f"Successfully extracted text from story {story_id}")
         return {'status': 'completed', 'story_id': story_id}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if object %}Edit Story: {{ object.title }}{% else %}Write New Story{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        <h1 class="gradient-text" style="margin-top: 0.5rem;">
+            {% if object %}Edit Story{% else %}Write New Story{% endif %}
+        </h1>
+        <p class="story-meta">Craft your story. We will extract entities and generate social posts in the background.</p>
+    </div>
+    
+    <div class="glass-card">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="error-text" style="margin-bottom: 1.5rem;">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="{{ form.title.id_for_label }}" class="form-label">Story Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="error-text">{{ form.title.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.content.id_for_label }}" class="form-label">Content</label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="error-text">{{ form.content.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.excerpt.id_for_label }}" class="form-label">Excerpt / Preview (Optional)</label>
+                {{ form.excerpt }}
+                {% if form.excerpt.errors %}
+                    <div class="error-text">{{ form.excerpt.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.status.id_for_label }}" class="form-label">Publishing Status</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div class="error-text">{{ form.status.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Save & Process AI
+                </button>
+                <a href="{% url 'stories:story-list' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WeekStory{% endblock %} | Weekly Stories & AI Social Hub</title>
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    
+    <!-- Custom Theme Styling -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="container nav-wrapper">
+            <a href="{% url 'stories:story-list' %}" class="navbar-brand">
+                <span class="gradient-text"><i class="fa-solid fa-feather-pointed"></i> WeekStory</span>
+            </a>
+            
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                    <li>
+                        <a href="{% url 'stories:story-list' %}" class="nav-link {% if request.resolver_match.url_name == 'story-list' %}active{% endif %}">
+                            <i class="fa-solid fa-list-check"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'stories:story-create' %}" class="nav-link {% if request.resolver_match.url_name == 'story-create' %}active{% endif %}">
+                            <i class="fa-solid fa-circle-plus"></i> New Story
+                        </a>
+                    </li>
+                    <li style="margin-left: 1rem; border-left: 1px solid var(--glass-border); padding-left: 1rem;">
+                        <span class="story-meta"><i class="fa-regular fa-user"></i> {{ user.username }}</span>
+                    </li>
+                    <li>
+                        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{% url 'login' %}" class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
+                            <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'stories:signup' %}" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-user-plus"></i> Signup
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Message Alerts Container -->
+    {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    <span>
+                        {% if message.tags == 'success' %}
+                            <i class="fa-solid fa-circle-check"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                        {{ message }}
+                    </span>
+                    <button class="alert-close">&times;</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; {% now "Y" %} WeekStory. Powered by Django, local AI, and HTMX. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Custom Frontend Logic -->
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<div id="ai-status-{{ story.id }}">
+    {% if story.extraction_status == 'pending' %}
+        <div hx-get="{% url 'stories:extraction-status' story.id %}" 
+             hx-trigger="every 4s" 
+             hx-swap="outerHTML" 
+             style="display: inline-block;">
+            <span class="badge ai-badge ai-badge-pending">
+                <i class="fa-regular fa-clock"></i> AI Pending
+            </span>
+        </div>
+    {% elif story.extraction_status == 'processing' %}
+        <div hx-get="{% url 'stories:extraction-status' story.id %}" 
+             hx-trigger="every 3s" 
+             hx-swap="outerHTML" 
+             style="display: inline-block;">
+            <span class="badge ai-badge ai-badge-processing">
+                <div class="spinner" style="margin-right: 0.25rem;"></div> AI Processing...
+            </span>
+        </div>
+    {% elif story.extraction_status == 'completed' %}
+        <a href="{% url 'stories:story-detail' story.id %}" class="badge ai-badge ai-badge-completed">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Ready
+        </a>
+    {% elif story.extraction_status == 'failed' %}
+        <span class="badge ai-badge ai-badge-failed" title="Error: {{ story.extraction_error|escape }}">
+            <i class="fa-solid fa-triangle-exclamation"></i> AI Failed
+        </span>
+    {% endif %}
+</div>

@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ story.title }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 0.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 class="gradient-text" style="font-size: 2.2rem; line-height: 1.2;">{{ story.title }}</h1>
+            <div class="story-meta" style="margin-top: 0.5rem;">
+                <span><i class="fa-regular fa-calendar-days"></i> Created on {{ story.created_at|date:"F d, Y" }}</span>
+                <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} words</span>
+                {% if story.status == 'draft' %}
+                    <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Draft</span>
+                {% elif story.status == 'published' %}
+                    <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Published</span>
+                {% else %}
+                    <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archived</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+            </a>
+            <a href="{% url 'stories:story-delete' story.id %}" class="btn btn-danger" style="background: rgba(239,68,68,0.06);">
+                <i class="fa-regular fa-trash-can"></i> Delete
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="detail-layout">
+    <!-- Left Column: Story Content & Social Posts -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Story Body Card -->
+        <div class="glass-card story-content-panel">
+            {% if story.excerpt %}
+                <div style="background: rgba(255,255,255,0.03); border-left: 3px solid hsl(var(--secondary)); padding: 1rem; border-radius: 4px; font-style: italic; margin-bottom: 1.5rem; color: hsl(var(--text-muted));">
+                    <strong>Excerpt:</strong> {{ story.excerpt }}
+                </div>
+            {% endif %}
+            
+            <div class="story-body-text">
+                {{ story.content }}
+            </div>
+        </div>
+        
+        <!-- Social Posts Generation Card -->
+        <div class="glass-card social-dashboard">
+            <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Generated Social Posts</h2>
+            <p class="story-meta" style="margin-bottom: 1.5rem;">Local AI generated drafts optimized for multi-platform distribution.</p>
+            
+            {% if story.extraction %}
+                {% with posts=story.extraction.social_posts.all %}
+                    {% if posts %}
+                        <!-- Tabs -->
+                        <div class="social-tabs">
+                            {% for post in posts %}
+                                <button class="social-tab {% if forloop.first %}active{% endif %}" onclick="switchTab(event, '{{ post.platform }}')">
+                                    {% if post.platform == 'twitter' %}
+                                        <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X
+                                    {% elif post.platform == 'linkedin' %}
+                                        <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
+                                    {% elif post.platform == 'instagram' %}
+                                        <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
+                                    {% elif post.platform == 'facebook' %}
+                                        <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
+                                    {% else %}
+                                        {{ post.get_platform_display }}
+                                    {% endif %}
+                                </button>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Tab contents -->
+                        {% for post in posts %}
+                            <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}">
+                                <div class="post-preview-card">
+                                    <div class="platform-brand-header">
+                                        <div class="platform-name">
+                                            {% if post.platform == 'twitter' %}
+                                                <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X Post Draft
+                                            {% elif post.platform == 'linkedin' %}
+                                                <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn Share Draft
+                                            {% elif post.platform == 'instagram' %}
+                                                <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram Caption Draft
+                                            {% elif post.platform == 'facebook' %}
+                                                <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook Post Draft
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge badge-draft"><i class="fa-solid fa-spinner"></i> Auto Draft</span>
+                                    </div>
+                                    
+                                    <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">
+                                        {{ post.generated_text }}
+                                    </div>
+                                    
+                                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+                                        <button class="btn btn-secondary btn-sm" disabled title="Social accounts API connections pending implementation">
+                                            <i class="fa-solid fa-pen"></i> Edit Draft
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" disabled title="OAuth credentials configuration required">
+                                            <i class="fa-solid fa-paper-plane"></i> Publish Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="padding: 2rem 1rem;">
+                            <p class="story-meta">No social posts generated. Check back in a few seconds.</p>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            {% else %}
+                <div class="empty-state" style="padding: 2rem 1rem;">
+                    <i class="fa-solid fa-circle-notch fa-spin empty-state-icon" style="font-size: 2rem;"></i>
+                    <p class="story-meta" style="margin-top: 1rem;">AI social post generation is waiting for text extraction to complete.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+    </div>
+
+    <!-- Right Column: AI Extraction & Details -->
+    <div class="detail-sidebar">
+        
+        <!-- AI Extraction Summary Card -->
+        <div class="glass-card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;" class="gradient-text">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Insights
+                </h3>
+                {% include 'stories/story_extraction_partial.html' with story=story %}
+            </div>
+            
+            {% if story.extraction %}
+                <div class="entities-group" style="margin-top: 0;">
+                    <div class="entities-title">Extracted Summary</div>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--text-muted)); max-height: 250px; overflow-y: auto;">
+                        {{ story.extraction.extracted_text }}
+                    </div>
+                </div>
+                
+                <div class="entities-group">
+                    <div class="entities-title"><i class="fa-solid fa-users"></i> Characters</div>
+                    <div class="tags-container">
+                        {% if story.extraction.entities.characters %}
+                            {% for char in story.extraction.entities.characters %}
+                                <span class="pill pill-character"><i class="fa-regular fa-user"></i> {{ char }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="empty-state-text">No characters identified.</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="entities-group">
+                    <div class="entities-title"><i class="fa-solid fa-map-location-dot"></i> Locations</div>
+                    <div class="tags-container">
+                        {% if story.extraction.entities.locations %}
+                            {% for loc in story.extraction.entities.locations %}
+                                <span class="pill pill-location"><i class="fa-solid fa-location-dot"></i> {{ loc }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="empty-state-text">No locations identified.</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="entities-group" style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1.5rem;">
+                    <div class="entities-title">Extraction Reliability</div>
+                    <div class="confidence-widget">
+                        <div class="confidence-bar-wrapper">
+                            <!-- Safe score calculation -->
+                            <div class="confidence-bar" style="width: {% widthratio story.extraction.confidence_score 1 100 %}%"></div>
+                        </div>
+                        <span class="confidence-val">{% widthratio story.extraction.confidence_score 1 100 %}%</span>
+                    </div>
+                    <div class="story-meta" style="font-size: 0.75rem; margin-top: 0.5rem; display: flex; justify-content: space-between;">
+                        <span>Model: {{ story.extraction.model_version }}</span>
+                        {% if story.extraction.processing_time_ms %}
+                            <span>Took {{ story.extraction.processing_time_ms }}ms</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                {% if story.extraction_status == 'failed' %}
+                    <div class="empty-state" style="padding: 1.5rem 0;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; color: hsl(var(--danger)); margin-bottom: 0.75rem;"></i>
+                        <p class="story-meta" style="font-size: 0.85rem; color: hsl(var(--danger));">Extraction failed.</p>
+                        <p style="font-size: 0.8rem; color: hsl(var(--text-muted)); margin-top: 0.5rem;">{{ story.extraction_error }}</p>
+                    </div>
+                {% else %}
+                    <!-- Polling container inside detail sidebar -->
+                    <div class="empty-state" style="padding: 2.5rem 0;" 
+                         hx-get="{% url 'stories:extraction-status' story.id %}" 
+                         hx-trigger="every 3s" 
+                         hx-swap="outerHTML">
+                        <i class="fa-solid fa-gear fa-spin empty-state-icon" style="font-size: 2rem;"></i>
+                        <p class="story-meta">AI model processing. Insights will load automatically...</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Stories URLs
 """
 from django.urls import path
@@ -7,6 +7,9 @@ from . import views
 app_name = 'stories'
 
 urlpatterns = [
+    # Signup
+    path('signup/', views.SignupView.as_view(), name='signup'),
+
     # List and Create
     path('', views.StoryListView.as_view(), name='story-list'),
     path('create/', views.StoryCreateView.as_view(), name='story-create'),

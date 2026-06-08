@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h1 class="gradient-text">Story Dashboard</h1>
+        <p class="story-meta">Write weekly stories and generate social media copy instantly</p>
+    </div>
+    <a href="{% url 'stories:story-create' %}" class="btn btn-primary">
+        <i class="fa-solid fa-feather"></i> Write Story
+    </a>
+</div>
+
+{% if stories %}
+    <div class="dashboard-grid">
+        {% for story in stories %}
+            <div class="glass-card story-card">
+                <div class="story-card-header">
+                    <div>
+                        <h3 class="story-card-title">
+                            <a href="{% url 'stories:story-detail' story.id %}">{{ story.title }}</a>
+                        </h3>
+                        <div class="story-meta" style="margin-top: 0.25rem;">
+                            <span><i class="fa-regular fa-calendar-days"></i> {{ story.created_at|date:"M d, Y" }}</span>
+                            <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} words</span>
+                        </div>
+                    </div>
+                    <div>
+                        <!-- Django Status Badge -->
+                        {% if story.status == 'draft' %}
+                            <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Draft</span>
+                        {% elif story.status == 'published' %}
+                            <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Published</span>
+                        {% else %}
+                            <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archived</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="story-card-body">
+                    <p>
+                        {% if story.excerpt %}
+                            {{ story.excerpt|truncatechars:120 }}
+                        {% else %}
+                            {{ story.content|truncatechars:120 }}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="story-card-footer">
+                    <!-- HTMX Polling container for AI status -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="story-meta" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">AI Status:</span>
+                        {% include 'stories/story_extraction_partial.html' with story=story %}
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary btn-sm" title="Edit Story">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                        <a href="{% url 'stories:story-delete' story.id %}" class="btn btn-danger btn-sm" style="padding: 0.4rem 0.6rem;" title="Delete Story">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="glass-card empty-state">
+        <div class="empty-state-icon">
+            <i class="fa-solid fa-feather-pointed"></i>
+        </div>
+        <h2>No stories yet</h2>
+        <p class="story-meta" style="margin-bottom: 2rem;">Upload your first weekly story to begin generating beautiful social media posts automatically.</p>
+        <a href="{% url 'stories:story-create' %}" class="btn btn-primary">
+            <i class="fa-solid fa-circle-plus"></i> Write Your First Story
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

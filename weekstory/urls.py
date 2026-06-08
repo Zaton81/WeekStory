@@ -18,16 +18,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.http import JsonResponse
+from django.views import View
 
 # Health check endpoint
-class HealthCheckView(APIView):
+class HealthCheckView(View):
     """Simple health check endpoint"""
-    permission_classes = []
-    
     def get(self, request):
-        return Response({'status': 'healthy'})
+        return JsonResponse({'status': 'healthy'})
 
 
 urlpatterns = [
@@ -37,13 +35,11 @@ urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
     
-    # API v1
-    path('api/v1/', include([
-        path('stories/', include('apps.stories.urls', namespace='stories')),
-        path('extractions/', include('apps.extractions.urls', namespace='extractions')),
-        path('social/', include('apps.social_posts.urls', namespace='social')),
-        path('ai/', include('apps.ai_models.urls', namespace='ai')),
-    ])),
+    # Authentication views
+    path('accounts/', include('django.contrib.auth.urls')),
+    
+    # Stories Web UI
+    path('', include('apps.stories.urls', namespace='stories')),
 ]
 
 # Serve media files in development

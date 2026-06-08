@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Story: {{ object.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding-top: 3vh;">
+    <div class="glass-card" style="border-color: rgba(239, 68, 68, 0.2); box-shadow: 0 8px 32px 0 rgba(239, 68, 68, 0.05);">
+        <h2 style="color: hsl(var(--danger)); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <i class="fa-solid fa-triangle-exclamation"></i> Delete Story
+        </h2>
+        
+        <p style="margin-bottom: 1.5rem; font-size: 1.05rem;">
+            Are you sure you want to delete the story <strong>"{{ object.title }}"</strong>?
+        </p>
+        
+        <div style="background: rgba(0, 0, 0, 0.15); border-radius: 8px; padding: 1rem; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+            <p class="story-meta" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Warning</p>
+            <p style="color: hsl(var(--text-muted)); font-size: 0.9rem;">
+                Deleting this story will permanently erase all associated AI extractions, confidence scores, entities, and generated social posts. This action cannot be undone.
+            </p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-danger">
+                    <i class="fa-regular fa-trash-can"></i> Yes, Delete Permanently
+                </button>
+                <a href="{% url 'stories:story-list' %}" class="btn btn-secondary">
+                    Cancel & Keep
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

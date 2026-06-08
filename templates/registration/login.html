@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="glass-card auth-card">
+        <div class="auth-header">
+            <h2>Welcome Back</h2>
+            <p class="story-meta">Log in to manage your weekly stories</p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="error-text" style="margin-bottom: 1rem; text-align: center;">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="id_username" class="form-label">Username</label>
+                <input type="text" name="username" id="id_username" class="form-input" placeholder="Enter your username" required autofocus>
+                {% if form.username.errors %}
+                    <div class="error-text">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="id_password" class="form-label">Password</label>
+                <input type="password" name="password" id="id_password" class="form-input" placeholder="Enter your password" required>
+                {% if form.password.errors %}
+                    <div class="error-text">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+            </button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>New to WeekStory? <a href="{% url 'stories:signup' %}">Create an account</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

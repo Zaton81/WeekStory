@@ -34,11 +34,11 @@ services:
   # Django Application
   web:
     build: .
-    command: gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 weekstory.wsgi:application
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     environment:
-      DEBUG: "False"
+      DEBUG: "True"
       SECRET_KEY: "your-secret-key-here-change-in-production"
       DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
       REDIS_URL: redis://redis:6379/0
@@ -66,7 +66,7 @@ services:
     build: .
     command: celery -A weekstory worker --loglevel=info --concurrency=2 --max-tasks-per-child=1000
     environment:
-      DEBUG: "False"
+      DEBUG: "True"
       SECRET_KEY: "your-secret-key-here-change-in-production"
       DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
       REDIS_URL: redis://redis:6379/0
@@ -90,7 +90,7 @@ services:
     build: .
     command: celery -A weekstory beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
-      DEBUG: "False"
+      DEBUG: "True"
       SECRET_KEY: "your-secret-key-here-change-in-production"
       DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
       REDIS_URL: redis://redis:6379/0
