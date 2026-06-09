@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'apps.extractions',
     'apps.social_posts',
     'apps.ai_models',
+    'apps.legal',
+    'apps.social_links',
 ]
 
 MIDDLEWARE = [
@@ -72,6 +74,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.stories.context_processors.global_context',
             ],
         },
     },
@@ -97,7 +100,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es'
 TIME_ZONE = config('TIME_ZONE', 'UTC')
 USE_I18N = True
 USE_TZ = True

@@ -38,6 +38,9 @@ urlpatterns = [
     # Authentication views
     path('accounts/', include('django.contrib.auth.urls')),
     
+    # Legal pages
+    path('legal/', include('apps.legal.urls', namespace='legal')),
+    
     # Stories Web UI
     path('', include('apps.stories.urls', namespace='stories')),
 ]

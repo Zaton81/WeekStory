@@ -7,8 +7,8 @@ from . import views
 app_name = 'stories'
 
 urlpatterns = [
-    # Signup
-    path('signup/', views.SignupView.as_view(), name='signup'),
+    # Comments
+    path('<int:pk>/comment/', views.add_comment, name='add-comment'),
 
     # List and Create
     path('', views.StoryListView.as_view(), name='story-list'),

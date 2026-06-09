@@ -44,4 +44,50 @@ document.addEventListener('DOMContentLoaded', () => {
             targetContent.classList.add('active');
         }
     };
+
+    // 3. Toggle Categories Dropdown in Navbar
+    const categoriesBtn = document.getElementById("categoriesDropdownBtn");
+    const categoriesMenu = document.getElementById("categoriesDropdownMenu");
+
+    if (categoriesBtn && categoriesMenu) {
+        categoriesBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            const isShown = categoriesMenu.classList.contains("show") || categoriesMenu.style.display === "block";
+            if (isShown) {
+                categoriesMenu.style.display = "none";
+                categoriesMenu.classList.remove("show");
+            } else {
+                categoriesMenu.style.display = "block";
+                categoriesMenu.classList.add("show");
+            }
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!categoriesBtn.contains(e.target) && !categoriesMenu.contains(e.target)) {
+                categoriesMenu.style.display = "none";
+                categoriesMenu.classList.remove("show");
+            }
+        });
+    }
+
+    // 4. Cookies Consent Banner Manager
+    const cookieBanner = document.getElementById("cookie-consent-banner");
+    const acceptCookiesBtn = document.getElementById("accept-cookies-btn");
+
+    if (cookieBanner && acceptCookiesBtn) {
+        const cookiesAccepted = document.cookie.split('; ').find(row => row.startsWith('cookies_accepted='));
+        if (!cookiesAccepted) {
+            cookieBanner.style.display = 'block';
+        }
+
+        acceptCookiesBtn.addEventListener("click", () => {
+            // Set cookie for 1 year (31536000 seconds)
+            document.cookie = "cookies_accepted=true; max-age=31536000; path=/";
+            cookieBanner.style.opacity = '0';
+            cookieBanner.style.transition = 'opacity 0.4s ease';
+            setTimeout(() => {
+                cookieBanner.style.display = 'none';
+            }, 400);
+        });
+    }
 });
