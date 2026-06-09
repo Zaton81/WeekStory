@@ -1,0 +1,14 @@
+<div class="comment-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); padding: 1.25rem; margin-top: 1rem; animation: fade-in 0.4s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-weight: 600; color: hsl(var(--secondary)); font-family: var(--font-heading);"><i class="fa-regular fa-user"></i> {{ comment.author_name }}</span>
+        <span class="story-meta" style="font-size: 0.75rem;"><i class="fa-regular fa-clock"></i> {{ comment.created_at|date:"M d, Y H:i" }}</span>
+    </div>
+    <div style="color: hsl(var(--text-primary)); white-space: pre-line; font-size: 0.95rem;">
+        {{ comment.content }}
+    </div>
+</div>
+
+{% if is_first %}
+    <!-- Out-of-band swap to hide the empty state placeholder when the first comment is added -->
+    <div id="no-comments-placeholder" hx-swap-oob="outerHTML" style="display: none;"></div>
+{% endif %}

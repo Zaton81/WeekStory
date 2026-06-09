@@ -59,3 +59,22 @@ class Story(models.Model):
     def extraction_complete(self):
         """Check if extraction is done"""
         return self.extraction_status in ['completed', 'failed']
+
+
+class Comment(models.Model):
+    """Anonymous comments on stories"""
+    
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='comments')
+    author_name = models.CharField(max_length=100, default='Anonymous')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['story', 'created_at']),
+        ]
+        
+    def __str__(self):
+        return f"Comment by {self.author_name} on {self.story.title}"
+

@@ -2,9 +2,7 @@
 Stories Forms
 """
 from django import forms
-from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
-from .models import Story
+from .models import Story, Comment
 
 
 class StoryForm(forms.ModelForm):
@@ -46,13 +44,23 @@ class StoryForm(forms.ModelForm):
         return content
 
 
-class UserRegisterForm(UserCreationForm):
-    """User registration form with email field required"""
+class CommentForm(forms.ModelForm):
+    """Form for writing a comment"""
     
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={
-        'placeholder': 'Enter your email address'
-    }))
+    class Meta:
+        model = Comment
+        fields = ['author_name', 'content']
+        widgets = {
+            'author_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Your name (e.g. Jane Doe)...',
+                'required': 'required'
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'form-input form-textarea-short',
+                'placeholder': 'Type your comment here...',
+                'rows': 4,
+                'required': 'required'
+            }),
+        }
 
-    class Meta(UserCreationForm.Meta):
-        model = User
-        fields = UserCreationForm.Meta.fields + ('email',)
