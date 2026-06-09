@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Story, Comment
+from .models import Story, Comment, Category
 from .forms import StoryForm, CommentForm
 
 
@@ -22,9 +22,25 @@ class StoryListView(ListView):
     context_object_name = 'stories'
 
     def get_queryset(self):
+        category_slug = self.request.GET.get('category')
         if self.request.user.is_authenticated and self.request.user.is_staff:
-            return Story.objects.all()
-        return Story.objects.filter(status='published')
+            queryset = Story.objects.all()
+        else:
+            queryset = Story.objects.filter(status='published')
+            
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_slug = self.request.GET.get('category')
+        if category_slug:
+            try:
+                context['active_category'] = Category.objects.get(slug=category_slug)
+            except Category.DoesNotExist:
+                pass
+        return context
 
 
 class StoryDetailView(DetailView):
@@ -108,8 +124,8 @@ def add_comment(request, pk):
 def story_extraction_status(request, pk):
     if not (request.user.is_authenticated and request.user.is_staff):
         if request.headers.get('HX-Request'):
-            return HttpResponse("Unauthorized", status=401)
-        return JsonResponse({'error': 'Unauthorized'}, status=401)
+            return HttpResponse("No autorizado", status=401)
+        return JsonResponse({'error': 'No autorizado'}, status=401)
     try:
         story = Story.objects.get(pk=pk)
         # If the request comes from HTMX, we return an HTML partial instead of JSON
@@ -123,5 +139,5 @@ def story_extraction_status(request, pk):
         })
     except Story.DoesNotExist:
         if request.headers.get('HX-Request'):
-            return HttpResponse("Not found", status=404)
-        return JsonResponse({'error': 'Not found'}, status=404)
+            return HttpResponse("No encontrado", status=404)
+        return JsonResponse({'error': 'No encontrado'}, status=404)

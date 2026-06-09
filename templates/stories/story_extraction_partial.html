@@ -5,7 +5,7 @@
              hx-swap="outerHTML" 
              style="display: inline-block;">
             <span class="badge ai-badge ai-badge-pending">
-                <i class="fa-regular fa-clock"></i> AI Pending
+                <i class="fa-regular fa-clock"></i> IA Pendiente
             </span>
         </div>
     {% elif story.extraction_status == 'processing' %}
@@ -14,16 +14,16 @@
              hx-swap="outerHTML" 
              style="display: inline-block;">
             <span class="badge ai-badge ai-badge-processing">
-                <div class="spinner" style="margin-right: 0.25rem;"></div> AI Processing...
+                <div class="spinner" style="margin-right: 0.25rem;"></div> Procesando con IA...
             </span>
         </div>
     {% elif story.extraction_status == 'completed' %}
         <a href="{% url 'stories:story-detail' story.id %}" class="badge ai-badge ai-badge-completed">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> AI Ready
+            <i class="fa-solid fa-wand-magic-sparkles"></i> IA Lista
         </a>
     {% elif story.extraction_status == 'failed' %}
         <span class="badge ai-badge ai-badge-failed" title="Error: {{ story.extraction_error|escape }}">
-            <i class="fa-solid fa-triangle-exclamation"></i> AI Failed
+            <i class="fa-solid fa-triangle-exclamation"></i> IA Fallida
         </span>
     {% endif %}
 </div>

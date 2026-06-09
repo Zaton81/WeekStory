@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if object %}Edit Story: {{ object.title }}{% else %}Write New Story{% endif %}
+    {% if object %}Editar Historia: {{ object.title }}{% else %}Escribir Nueva Historia{% endif %}
 {% endblock %}
 
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto;">
     <div style="margin-bottom: 2rem;">
-        <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Volver al Panel de Control</a>
         <h1 class="gradient-text" style="margin-top: 0.5rem;">
-            {% if object %}Edit Story{% else %}Write New Story{% endif %}
+            {% if object %}Editar Historia{% else %}Escribir Nueva Historia{% endif %}
         </h1>
-        <p class="story-meta">Craft your story. We will extract entities and generate social posts in the background.</p>
+        <p class="story-meta">Redacta tu historia. Extraeremos personajes, ubicaciones y generaremos publicaciones para redes sociales en segundo plano.</p>
     </div>
     
     <div class="glass-card">
@@ -27,7 +27,7 @@
             {% endif %}
             
             <div class="form-group">
-                <label for="{{ form.title.id_for_label }}" class="form-label">Story Title</label>
+                <label for="{{ form.title.id_for_label }}" class="form-label">Título de la historia</label>
                 {{ form.title }}
                 {% if form.title.errors %}
                     <div class="error-text">{{ form.title.errors.0 }}</div>
@@ -35,7 +35,15 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.content.id_for_label }}" class="form-label">Content</label>
+                <label for="{{ form.category.id_for_label }}" class="form-label">Categoría</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <div class="error-text">{{ form.category.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.content.id_for_label }}" class="form-label">Contenido</label>
                 {{ form.content }}
                 {% if form.content.errors %}
                     <div class="error-text">{{ form.content.errors.0 }}</div>
@@ -43,7 +51,7 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.excerpt.id_for_label }}" class="form-label">Excerpt / Preview (Optional)</label>
+                <label for="{{ form.excerpt.id_for_label }}" class="form-label">Resumen / Vista Previa (Opcional)</label>
                 {{ form.excerpt }}
                 {% if form.excerpt.errors %}
                     <div class="error-text">{{ form.excerpt.errors.0 }}</div>
@@ -51,7 +59,7 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.status.id_for_label }}" class="form-label">Publishing Status</label>
+                <label for="{{ form.status.id_for_label }}" class="form-label">Estado de publicación</label>
                 {{ form.status }}
                 {% if form.status.errors %}
                     <div class="error-text">{{ form.status.errors.0 }}</div>
@@ -60,10 +68,10 @@
             
             <div style="display: flex; gap: 1rem; margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> Save & Process AI
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Guardar y procesar con IA
                 </button>
                 <a href="{% url 'stories:story-list' %}" class="btn btn-secondary">
-                    Cancel
+                    Cancelar
                 </a>
             </div>
         </form>

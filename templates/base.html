@@ -1,23 +1,23 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WeekStory{% endblock %} | Weekly Stories & AI Social Hub</title>
+    <title>{% block title %}WeekStory{% endblock %} | Historias Semanales y Hub de Redes Sociales con IA</title>
     
-    <!-- FontAwesome for Premium Icons -->
+    <!-- FontAwesome para Iconos Premium -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     
-    <!-- Custom Theme Styling -->
+    <!-- Estilos de tema personalizados -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
-    <!-- Navigation Header -->
+    <!-- Cabecera de Navegación -->
     <nav class="navbar">
         <div class="container nav-wrapper">
             <a href="{% url 'stories:story-list' %}" class="navbar-brand">
@@ -25,20 +25,47 @@
             </a>
             
             <ul class="navbar-nav">
+                <!-- Desplegable de Categorías para todos los usuarios -->
+                <li class="dropdown" style="position: relative;">
+                    <a href="#" class="nav-link" id="categoriesDropdownBtn" style="display: flex; align-items: center; gap: 0.35rem;">
+                        <i class="fa-solid fa-folder"></i> Categorías <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: 0.15rem;"></i>
+                    </a>
+                    <ul class="dropdown-menu" id="categoriesDropdownMenu" style="position: absolute; top: 100%; left: 0; display: none; list-style: none; padding: 0.5rem; min-width: 180px; z-index: 1000; margin-top: 0.5rem;">
+                        {% for cat in all_categories %}
+                            <li style="margin-bottom: 0.25rem;">
+                                <a href="{% url 'stories:story-list' %}?category={{ cat.slug }}" class="nav-link" style="padding: 0.35rem 0.5rem; display: block; font-size: 0.9rem;">{{ cat.name }}</a>
+                            </li>
+                        {% empty %}
+                            <li style="color: hsl(var(--text-muted)); font-size: 0.85rem; padding: 0.35rem 0.5rem;">No hay categorías</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <!-- Redes Sociales en el Navbar -->
+                {% if social_networks %}
+                    <li style="display: flex; gap: 0.75rem; align-items: center; margin-right: 0.5rem; padding-right: 0.75rem; border-right: 1px solid var(--glass-border);">
+                        {% for net in social_networks %}
+                            <a href="{{ net.url }}" target="_blank" class="story-meta" title="{{ net.name }}" style="font-size: 1.05rem; transition: var(--transition);">
+                                <i class="{{ net.icon_class }}"></i>
+                            </a>
+                        {% endfor %}
+                    </li>
+                {% endif %}
+
                 {% if user.is_authenticated and user.is_staff %}
                     <li>
                         <a href="{% url 'admin:index' %}" class="nav-link">
-                            <i class="fa-solid fa-gauge"></i> Admin Panel
+                            <i class="fa-solid fa-gauge"></i> Panel Admin
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'stories:story-list' %}" class="nav-link {% if request.resolver_match.url_name == 'story-list' %}active{% endif %}">
-                            <i class="fa-solid fa-list-check"></i> Dashboard
+                            <i class="fa-solid fa-list-check"></i> Panel de Control
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'stories:story-create' %}" class="nav-link {% if request.resolver_match.url_name == 'story-create' %}active{% endif %}">
-                            <i class="fa-solid fa-circle-plus"></i> New Story
+                            <i class="fa-solid fa-circle-plus"></i> Nueva Historia
                         </a>
                     </li>
                     <li style="margin-left: 1rem; border-left: 1px solid var(--glass-border); padding-left: 1rem;">
@@ -48,22 +75,16 @@
                         <form action="{% url 'logout' %}" method="post" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
                             </button>
                         </form>
-                    </li>
-                {% else %}
-                    <li>
-                        <a href="{% url 'admin:index' %}" class="nav-link">
-                            <i class="fa-solid fa-arrow-right-to-bracket"></i> Admin Login
-                        </a>
                     </li>
                 {% endif %}
             </ul>
         </div>
     </nav>
 
-    <!-- Message Alerts Container -->
+    <!-- Contenedor de Alertas de Mensajes -->
     {% if messages %}
         <div class="alert-container">
             {% for message in messages %}
@@ -84,21 +105,94 @@
         </div>
     {% endif %}
 
-    <!-- Main Content -->
+    <!-- Contenido Principal -->
     <main>
         <div class="container">
+            <!-- Banner Superior (Publicidad) -->
+            {% if banner_arriba %}
+                <div style="margin-bottom: 2rem; text-align: center;">
+                    <a href="{{ banner_arriba.link_url }}" target="_blank">
+                        {% if banner_arriba.image %}
+                            <img src="{{ banner_arriba.image.url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                        {% elif banner_arriba.image_url %}
+                            <img src="{{ banner_arriba.image_url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+
             {% block content %}{% endblock %}
+
+            <!-- Banner Inferior (Publicidad) -->
+            {% if banner_abajo %}
+                <div style="margin-top: 3rem; text-align: center;">
+                    <a href="{{ banner_abajo.link_url }}" target="_blank">
+                        {% if banner_abajo.image %}
+                            <img src="{{ banner_abajo.image.url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                        {% elif banner_abajo.image_url %}
+                            <img src="{{ banner_abajo.image_url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </main>
 
-    <!-- Footer -->
+    <!-- Pie de página -->
     <footer>
         <div class="container">
-            <p>&copy; {% now "Y" %} WeekStory. Powered by Django, local AI, and HTMX. All rights reserved.</p>
+            <!-- Redes Sociales en el Footer -->
+            {% if social_networks %}
+                <div style="display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 1.5rem; font-size: 1.4rem;">
+                    {% for net in social_networks %}
+                        <a href="{{ net.url }}" target="_blank" title="{{ net.name }}" class="story-meta" style="transition: var(--transition);">
+                            <i class="{{ net.icon_class }}"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <p>&copy; {% now "Y" %} WeekStory. Potenciado por Django, IA local y HTMX. Todos los derechos reservados.</p>
+            
+            <!-- Enlaces de páginas legales -->
+            {% if legal_pages %}
+                <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+                    {% for page in legal_pages %}
+                        <a href="{% url 'legal:detail' page.slug %}" class="story-meta" style="text-decoration: underline;">{{ page.title }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
     </footer>
 
-    <!-- Custom Frontend Logic -->
+    <!-- Banner de Consentimiento de Cookies (Aviso de Cookies) -->
+    <div id="cookie-consent-banner" class="glass-card" style="position: fixed; bottom: 2rem; left: 2rem; right: 2rem; z-index: 10000; display: none; padding: 1.5rem; border-color: var(--glass-border); max-width: 600px; margin: 0 auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6); animation: slide-up 0.5s ease-out forwards;">
+        <h3 class="gradient-text" style="font-size: 1.2rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
+            <i class="fa-solid fa-cookie-bite"></i> Consentimiento de Cookies
+        </h3>
+        <p style="font-size: 0.85rem; color: hsl(var(--text-muted)); margin-bottom: 1rem; line-height: 1.5; font-family: var(--font-body);">
+            Utilizamos cookies propias y de terceros para personalizar tu experiencia, mostrar anuncios adaptados a tus intereses y analizar el rendimiento de nuestro sitio. Si continúas navegando, aceptas su uso.
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center;">
+            {% if legal_pages %}
+                {% for page in legal_pages %}
+                    {% if "cookie" in page.slug or "cookie" in page.title|lower %}
+                        <a href="{% url 'legal:detail' page.slug %}" class="story-meta" style="font-size: 0.8rem; text-decoration: underline; margin-right: 0.5rem;">Leer Política</a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            <button id="accept-cookies-btn" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">Aceptar</button>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes slide-up {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+
+    <!-- Lógica de Frontend Personalizada -->
     <script src="{% static 'js/main.js' %}"></script>
 </body>
 </html>

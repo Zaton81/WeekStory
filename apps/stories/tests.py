@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from apps.stories.models import Story, Comment
+from apps.stories.models import Story, Comment, Category
 
 
 class StoryAccessTests(TestCase):
@@ -10,12 +10,16 @@ class StoryAccessTests(TestCase):
         self.staff_user = User.objects.create_user(username='admin', password='password123', is_staff=True)
         self.normal_user = User.objects.create_user(username='normal', password='password123', is_staff=False)
         
+        # Create Category
+        self.category = Category.objects.create(name="Relatos", slug="relatos")
+        
         # Create stories
         self.published_story = Story.objects.create(
             user=self.staff_user,
             title="Published Weekly Story",
             content="This is the content of a published story, which should be long enough.",
             excerpt="Short excerpt.",
+            category=self.category,
             status="published"
         )
         
@@ -33,6 +37,7 @@ class StoryAccessTests(TestCase):
         response = self.client.get(reverse('stories:story-list'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.published_story.title)
+        self.assertContains(response, self.category.name)
         self.assertNotContains(response, self.draft_story.title)
 
     def test_staff_user_can_list_all_stories(self):
@@ -46,7 +51,8 @@ class StoryAccessTests(TestCase):
         response = self.client.get(reverse('stories:story-detail', args=[self.published_story.id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.published_story.content)
-        self.assertContains(response, "Comments")
+        self.assertContains(response, self.category.name)
+        self.assertContains(response, "Comentarios")
 
     def test_anonymous_user_cannot_view_draft_detail(self):
         response = self.client.get(reverse('stories:story-detail', args=[self.draft_story.id]))
@@ -60,7 +66,6 @@ class StoryAccessTests(TestCase):
 
     def test_anonymous_user_cannot_access_create_story(self):
         response = self.client.get(reverse('stories:story-create'))
-        # Using UserPassesTestMixin redirects to login (which gives a 403 or redirects)
         self.assertEqual(response.status_code, 302)
 
     def test_staff_user_can_access_create_story(self):
@@ -74,7 +79,7 @@ class StoryAccessTests(TestCase):
             reverse('stories:add-comment', args=[self.published_story.id]),
             {'author_name': 'John Doe', 'content': 'This is a nice story!'}
         )
-        self.assertEqual(response.status_code, 302)  # Redirects back to detail
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(Comment.objects.count(), comment_count_before + 1)
         
         # Verify comment content
@@ -94,3 +99,24 @@ class StoryAccessTests(TestCase):
         self.assertContains(response, 'Htmx User')
         self.assertContains(response, 'HTMX works great!')
         self.assertEqual(Comment.objects.count(), comment_count_before + 1)
+
+    def test_staff_user_can_create_story_with_new_category(self):
+        self.client.login(username='admin', password='password123')
+        response = self.client.post(
+            reverse('stories:story-create'),
+            {
+                'title': 'New Story with New Category',
+                'content': 'This is the body of the story and it must have at least 50 characters to pass the forms validator cleanly.',
+                'excerpt': 'Preview description.',
+                'status': 'published',
+                'new_category_name': 'Tecnología'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify category was created and associated
+        new_category = Category.objects.get(slug='tecnologia')
+        self.assertEqual(new_category.name, 'Tecnología')
+        
+        story = Story.objects.get(title='New Story with New Category')
+        self.assertEqual(story.category, new_category)
