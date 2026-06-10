@@ -96,8 +96,8 @@ class StoryAccessTests(TestCase):
             HTTP_HX_REQUEST='true'
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Htmx User')
-        self.assertContains(response, 'HTMX works great!')
+        self.assertContains(response, 'Comentario enviado')
+        self.assertContains(response, 'Tu comentario ha sido recibido y será visible una vez que sea aprobado')
         self.assertEqual(Comment.objects.count(), comment_count_before + 1)
 
     def test_staff_user_can_create_story_with_new_category(self):

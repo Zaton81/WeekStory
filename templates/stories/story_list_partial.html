@@ -1,0 +1,90 @@
+{% for story in stories %}
+    <div class="glass-card story-card">
+        <!-- Imagen de portada miniatura -->
+        {% if story.cover_image %}
+            <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb">
+                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+            </a>
+        {% else %}
+            <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb story-cover-placeholder">
+                <i class="fa-solid fa-feather-pointed"></i>
+            </a>
+        {% endif %}
+
+        <div class="story-card-header">
+            <div>
+                <h3 class="story-card-title">
+                    <a href="{% url 'stories:story-detail' story.id %}">{{ story.title }}</a>
+                </h3>
+                <div class="story-meta" style="margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem 0.8rem;">
+                    <span><i class="fa-regular fa-calendar-days"></i> {{ story.created_at|date:"d M, Y" }}</span>
+                    <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} palabras</span>
+                    {% if story.category %}
+                        <span class="badge badge-category"><i class="fa-solid fa-folder"></i> {{ story.category.name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if user.is_authenticated and user.is_staff %}
+                <div>
+                    {% if story.status == 'draft' %}
+                        <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador</span>
+                    {% elif story.status == 'published' %}
+                        <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                    {% elif story.status == 'scheduled' %}
+                        <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado</span>
+                    {% else %}
+                        <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="story-card-body">
+            <p>
+                {% if story.excerpt %}
+                    {{ story.excerpt|truncatechars:120 }}
+                {% else %}
+                    {{ story.content|striptags|truncatechars:120 }}
+                {% endif %}
+            </p>
+        </div>
+        
+        {% if user.is_authenticated and user.is_staff %}
+            <div class="story-card-footer">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="story-meta" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Estado IA:</span>
+                    {% include 'stories/story_extraction_partial.html' with story=story %}
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                    <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary btn-sm" title="Editar Historia">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </a>
+                    <a href="{% url 'stories:story-delete' story.id %}" class="btn btn-danger btn-sm" style="padding: 0.4rem 0.6rem;" title="Eliminar Historia">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="story-card-footer" style="justify-content: flex-end;">
+                <a href="{% url 'stories:story-detail' story.id %}" class="btn btn-secondary btn-sm">
+                    Leer Historia <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}
+
+<!-- Next page trigger for infinite scroll -->
+{% if page_obj.has_next %}
+    <div id="infinite-scroll-trigger"
+         hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+         hx-trigger="revealed"
+         hx-swap="outerHTML"
+         style="grid-column: 1 / -1; text-align: center; padding: 2rem 0;">
+        <div class="infinite-scroll-loader">
+            <div class="spinner"></div>
+            <span class="story-meta">Cargando más historias...</span>
+        </div>
+    </div>
+{% endif %}

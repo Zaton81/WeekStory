@@ -5,31 +5,39 @@ def global_context(request):
     - Páginas legales activas
     - Perfiles de redes sociales configurados
     - Banners publicitarios activos por su posición
+    - Páginas personales activas (navbar)
     """
     from apps.stories.models import Category, Banner
     from apps.legal.models import LegalPage
     from apps.social_links.models import SocialNetwork
+    from apps.pages.models import Page
 
     # Manejo de excepciones para evitar fallos cuando no se han ejecutado las migraciones aún
     try:
-        categories = Category.objects.all()
-        banner_arriba = Banner.objects.filter(position='arriba', is_active=True).first()
-        banner_abajo = Banner.objects.filter(position='abajo', is_active=True).first()
-        banner_lateral = Banner.objects.filter(position='lateral', is_active=True).first()
-        banner_entre_historias = Banner.objects.filter(position='entre_historias', is_active=True).first()
+        categories = list(Category.objects.all())
+        active_banners = list(Banner.objects.filter(is_active=True))
+        banner_arriba = next((b for b in active_banners if b.position == 'arriba'), None)
+        banner_abajo = next((b for b in active_banners if b.position == 'abajo'), None)
+        banner_lateral = next((b for b in active_banners if b.position == 'lateral'), None)
+        banner_entre_historias = next((b for b in active_banners if b.position == 'entre_historias'), None)
     except Exception:
         categories = []
         banner_arriba = banner_abajo = banner_lateral = banner_entre_historias = None
 
     try:
-        legal_pages = LegalPage.objects.filter(is_active=True)
+        legal_pages = list(LegalPage.objects.filter(is_active=True))
     except Exception:
         legal_pages = []
 
     try:
-        social_networks = SocialNetwork.objects.filter(is_active=True)
+        social_networks = list(SocialNetwork.objects.filter(is_active=True))
     except Exception:
         social_networks = []
+
+    try:
+        personal_pages = list(Page.objects.filter(is_active=True, show_in_navbar=True))
+    except Exception:
+        personal_pages = []
 
     return {
         'all_categories': categories,
@@ -39,4 +47,5 @@ def global_context(request):
         'banner_entre_historias': banner_entre_historias,
         'legal_pages': legal_pages,
         'social_networks': social_networks,
+        'personal_pages': personal_pages,
     }

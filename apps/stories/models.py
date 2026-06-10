@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
+from django_ckeditor_5.fields import CKEditor5Field
 
 
 class Category(models.Model):
@@ -24,16 +25,19 @@ class Story(models.Model):
     STATUS_CHOICES = [
         ('draft', _('Borrador')),
         ('published', _('Publicado')),
+        ('scheduled', _('Programado')),
         ('archived', _('Archivado')),
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stories', verbose_name="Usuario")
     title = models.CharField(max_length=200, verbose_name="Título")
-    content = models.TextField(verbose_name="Contenido")
+    content = CKEditor5Field(verbose_name="Contenido", config_name='default')
     excerpt = models.TextField(blank=True, help_text="Descripción corta para vista previa", verbose_name="Resumen")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='stories', verbose_name="Categoría")
+    cover_image = models.ImageField(upload_to='stories/covers/', blank=True, null=True, verbose_name="Imagen de portada")
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="Estado")
+    scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="Publicación programada", help_text="Fecha y hora para publicar automáticamente (solo si el estado es 'Programado')")
     
     # Metadatos
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado el")
@@ -78,11 +82,13 @@ class Story(models.Model):
 
 
 class Comment(models.Model):
-    """Comentarios anónimos en las historias"""
+    """Comentarios en las historias con moderación"""
     
     story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='comments', verbose_name="Historia")
-    author_name = models.CharField(max_length=100, default='Anónimo', verbose_name="Nombre del autor")
+    author_name = models.CharField(max_length=100, verbose_name="Nombre del autor")
     content = models.TextField(verbose_name="Comentario")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="Dirección IP")
+    is_approved = models.BooleanField(default=False, verbose_name="Aprobado")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado el")
     
     class Meta:
@@ -91,6 +97,7 @@ class Comment(models.Model):
         ordering = ['created_at']
         indexes = [
             models.Index(fields=['story', 'created_at']),
+            models.Index(fields=['is_approved']),
         ]
         
     def __str__(self):
@@ -114,6 +121,12 @@ class Banner(models.Model):
     position = models.CharField(max_length=20, choices=POSITION_CHOICES, verbose_name="Posición")
     is_active = models.BooleanField(default=True, verbose_name="Activo")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado el")
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if not self.image and not self.image_url:
+            raise ValidationError("Debe proporcionar una imagen local o una URL de imagen alternativa.")
     
     class Meta:
         verbose_name = "Banner de Publicidad"
@@ -121,4 +134,3 @@ class Banner(models.Model):
         
     def __str__(self):
         return f"{self.title} ({self.get_position_display()})"
-

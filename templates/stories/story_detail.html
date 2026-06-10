@@ -19,6 +19,8 @@
                         <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador</span>
                     {% elif story.status == 'published' %}
                         <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                    {% elif story.status == 'scheduled' %}
+                        <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado {{ story.scheduled_at|date:"d/m/Y H:i" }}</span>
                     {% else %}
                         <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
                     {% endif %}
@@ -40,9 +42,16 @@
 </div>
 
 <div class="{% if user.is_authenticated and user.is_staff %}detail-layout{% endif %}">
-    <!-- Columna Izquierda: Contenido de la historia, Comentarios y (para admins) Publicaciones en redes sociales -->
+    <!-- Columna Izquierda: Contenido de la historia, Historias relacionadas, Comentarios y (para admins) Publicaciones en redes sociales -->
     <div style="display: flex; flex-direction: column; gap: 2rem;">
         
+        <!-- Imagen de portada -->
+        {% if story.cover_image %}
+            <div class="story-cover-full">
+                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+            </div>
+        {% endif %}
+
         <!-- Tarjeta de Contenido de la Historia -->
         <div class="glass-card story-content-panel">
             {% if story.excerpt %}
@@ -51,11 +60,42 @@
                 </div>
             {% endif %}
             
-            <div class="story-body-text">
-                {{ story.content }}
+            <div class="story-body-text ck-content">
+                {{ story.content|safe }}
             </div>
         </div>
-        
+
+        <!-- Historias Relacionadas -->
+        {% if related_stories %}
+            <div class="glass-card">
+                <h3 class="gradient-text" style="font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-book-open"></i> Historias Relacionadas
+                </h3>
+                <div class="related-stories-grid">
+                    {% for related in related_stories %}
+                        <a href="{% url 'stories:story-detail' related.id %}" class="related-story-card glass-card">
+                            {% if related.cover_image %}
+                                <div class="related-story-thumb">
+                                    <img src="{{ related.cover_image.url }}" alt="{{ related.title }}">
+                                </div>
+                            {% else %}
+                                <div class="related-story-thumb related-story-placeholder">
+                                    <i class="fa-solid fa-feather-pointed"></i>
+                                </div>
+                            {% endif %}
+                            <div class="related-story-info">
+                                <h4>{{ related.title }}</h4>
+                                <span class="story-meta">
+                                    <i class="fa-regular fa-calendar-days"></i> {{ related.created_at|date:"d M, Y" }}
+                                    {% if related.category %} · {{ related.category.name }}{% endif %}
+                                </span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
         <!-- Sección de Comentarios -->
         <div class="glass-card">
             <h3 class="gradient-text" style="font-size: 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -66,22 +106,27 @@
             <form hx-post="{% url 'stories:add-comment' story.id %}" 
                   hx-target="#comments-list" 
                   hx-swap="beforeend" 
-                  hx-on::after-request="this.reset();" 
+                  hx-on::after-request="if(event.detail.successful) this.reset();" 
                   style="margin-bottom: 2rem; margin-top: 1rem;">
                 {% csrf_token %}
                 <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" for="id_author_name">Tu Nombre</label>
+                        <label class="form-label" for="id_author_name">Tu Nombre <span style="color: hsl(var(--danger));">*</span></label>
                         {{ comment_form.author_name }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" for="id_content">Comentario</label>
+                        <label class="form-label" for="id_content">Comentario <span style="color: hsl(var(--danger));">*</span></label>
                         {{ comment_form.content }}
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="fa-solid fa-paper-plane"></i> Enviar Comentario
-                </button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar Comentario
+                    </button>
+                    <span class="story-meta" style="font-size: 0.75rem;">
+                        <i class="fa-solid fa-shield-halved"></i> Los comentarios son moderados antes de publicarse.
+                    </span>
+                </div>
             </form>
 
             <!-- Lista de Comentarios -->

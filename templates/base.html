@@ -14,6 +14,8 @@
     
     <!-- Estilos de tema personalizados -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    {% block extra_head %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
@@ -39,6 +41,27 @@
                             <li style="color: hsl(var(--text-muted)); font-size: 0.85rem; padding: 0.35rem 0.5rem;">No hay categorías</li>
                         {% endfor %}
                     </ul>
+                </li>
+
+                <!-- Páginas Personales en el Navbar -->
+                {% for p_page in personal_pages %}
+                    <li>
+                        <a href="{% url 'pages:page-detail' p_page.slug %}" class="nav-link">
+                            <i class="{{ p_page.icon_class }}"></i> {{ p_page.title }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                <!-- Buscador en el Navbar -->
+                <li class="search-wrapper">
+                    <form action="{% url 'stories:story-list' %}" method="get" class="search-form" id="navSearchForm">
+                        <div class="search-box">
+                            <input type="text" name="q" placeholder="Buscar historias..." value="{{ request.GET.q }}" class="search-input" id="navSearchInput" autocomplete="off">
+                            <button type="submit" class="search-btn" aria-label="Buscar">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                        </div>
+                    </form>
                 </li>
 
                 <!-- Redes Sociales en el Navbar -->
@@ -154,14 +177,17 @@
             
             <p>&copy; {% now "Y" %} WeekStory. Potenciado por Django, IA local y HTMX. Todos los derechos reservados.</p>
             
-            <!-- Enlaces de páginas legales -->
-            {% if legal_pages %}
-                <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+            <!-- Enlaces de páginas legales y personales -->
+            <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+                {% for p_page in personal_pages %}
+                    <a href="{% url 'pages:page-detail' p_page.slug %}" class="story-meta" style="text-decoration: underline;">{{ p_page.title }}</a>
+                {% endfor %}
+                {% if legal_pages %}
                     {% for page in legal_pages %}
                         <a href="{% url 'legal:detail' page.slug %}" class="story-meta" style="text-decoration: underline;">{{ page.title }}</a>
                     {% endfor %}
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </footer>
 
@@ -194,5 +220,6 @@
 
     <!-- Lógica de Frontend Personalizada -->
     <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

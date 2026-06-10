@@ -38,10 +38,16 @@ urlpatterns = [
     # Authentication views
     path('accounts/', include('django.contrib.auth.urls')),
     
+    # CKEditor 5 file uploads
+    path('ckeditor5/', include('django_ckeditor_5.urls')),
+    
     # Legal pages
     path('legal/', include('apps.legal.urls', namespace='legal')),
     
-    # Stories Web UI
+    # Personal pages
+    path('paginas/', include('apps.pages.urls', namespace='pages')),
+    
+    # Stories Web UI (catch-all, must be last)
     path('', include('apps.stories.urls', namespace='stories')),
 ]
 

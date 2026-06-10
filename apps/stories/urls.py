@@ -7,6 +7,9 @@ from . import views
 app_name = 'stories'
 
 urlpatterns = [
+    # Search (HTMX live search)
+    path('search/', views.search_stories, name='search'),
+
     # Comments
     path('<int:pk>/comment/', views.add_comment, name='add-comment'),
 

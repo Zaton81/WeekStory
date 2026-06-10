@@ -17,6 +17,12 @@
                     <a href="{% url 'stories:story-list' %}" style="font-size: 0.8rem; margin-left: 0.5rem; color: hsl(var(--text-muted)); text-decoration: underline;">(Ver todas)</a>
                 </p>
             {% endif %}
+            {% if search_query %}
+                <p style="margin-top: 0.5rem; font-size: 1rem; color: hsl(var(--secondary));">
+                    <i class="fa-solid fa-magnifying-glass"></i> Resultados para: <strong>"{{ search_query }}"</strong> 
+                    <a href="{% url 'stories:story-list' %}" style="font-size: 0.8rem; margin-left: 0.5rem; color: hsl(var(--text-muted)); text-decoration: underline;">(Limpiar búsqueda)</a>
+                </p>
+            {% endif %}
         {% endif %}
     </div>
     {% if user.is_authenticated and user.is_staff %}
@@ -30,7 +36,7 @@
     <!-- Columna Izquierda: Listado de Historias -->
     <div>
         {% if stories %}
-            <div class="dashboard-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+            <div class="dashboard-grid" id="stories-grid" style="margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
                 {% for story in stories %}
                     <!-- Banner entre historias (se muestra tras la segunda historia) -->
                     {% if forloop.counter == 3 and banner_entre_historias %}
@@ -47,6 +53,17 @@
                     {% endif %}
 
                     <div class="glass-card story-card">
+                        <!-- Imagen de portada miniatura -->
+                        {% if story.cover_image %}
+                            <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb">
+                                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+                            </a>
+                        {% else %}
+                            <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb story-cover-placeholder">
+                                <i class="fa-solid fa-feather-pointed"></i>
+                            </a>
+                        {% endif %}
+
                         <div class="story-card-header">
                             <div>
                                 <h3 class="story-card-title">
@@ -67,6 +84,8 @@
                                         <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador</span>
                                     {% elif story.status == 'published' %}
                                         <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                                    {% elif story.status == 'scheduled' %}
+                                        <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado</span>
                                     {% else %}
                                         <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
                                     {% endif %}
@@ -79,7 +98,7 @@
                                 {% if story.excerpt %}
                                     {{ story.excerpt|truncatechars:120 }}
                                 {% else %}
-                                    {{ story.content|truncatechars:120 }}
+                                    {{ story.content|striptags|truncatechars:120 }}
                                 {% endif %}
                             </p>
                         </div>
@@ -110,17 +129,41 @@
                     </div>
                 {% endfor %}
             </div>
+
+            <!-- Scroll Infinito: Trigger HTMX para cargar la siguiente página -->
+            {% if page_obj.has_next %}
+                <div id="infinite-scroll-trigger"
+                     hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                     hx-trigger="revealed"
+                     hx-swap="afterend"
+                     hx-target="#infinite-scroll-trigger"
+                     hx-swap="outerHTML"
+                     style="text-align: center; padding: 2rem 0;">
+                    <div class="infinite-scroll-loader">
+                        <div class="spinner"></div>
+                        <span class="story-meta">Cargando más historias...</span>
+                    </div>
+                </div>
+            {% endif %}
         {% else %}
             <div class="glass-card empty-state">
                 <div class="empty-state-icon">
                     <i class="fa-solid fa-feather-pointed"></i>
                 </div>
-                <h2>No hay historias aún</h2>
-                <p class="story-meta" style="margin-bottom: 2rem;">No hay historias semanales publicadas en este momento.</p>
-                {% if user.is_authenticated and user.is_staff %}
-                    <a href="{% url 'stories:story-create' %}" class="btn btn-primary">
-                        <i class="fa-solid fa-circle-plus"></i> Escribir tu primera historia
+                {% if search_query %}
+                    <h2>No se encontraron resultados</h2>
+                    <p class="story-meta" style="margin-bottom: 2rem;">No hay historias que coincidan con "<strong>{{ search_query }}</strong>".</p>
+                    <a href="{% url 'stories:story-list' %}" class="btn btn-secondary">
+                        <i class="fa-solid fa-arrow-left"></i> Ver todas las historias
                     </a>
+                {% else %}
+                    <h2>No hay historias aún</h2>
+                    <p class="story-meta" style="margin-bottom: 2rem;">No hay historias semanales publicadas en este momento.</p>
+                    {% if user.is_authenticated and user.is_staff %}
+                        <a href="{% url 'stories:story-create' %}" class="btn btn-primary">
+                            <i class="fa-solid fa-circle-plus"></i> Escribir tu primera historia
+                        </a>
+                    {% endif %}
                 {% endif %}
             </div>
         {% endif %}

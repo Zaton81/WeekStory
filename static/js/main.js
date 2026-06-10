@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         acceptCookiesBtn.addEventListener("click", () => {
             // Set cookie for 1 year (31536000 seconds)
             document.cookie = "cookies_accepted=true; max-age=31536000; path=/";
+            cookieBanner.style.animation = 'none';
             cookieBanner.style.opacity = '0';
             cookieBanner.style.transition = 'opacity 0.4s ease';
             setTimeout(() => {

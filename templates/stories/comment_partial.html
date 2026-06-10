@@ -1,12 +1,30 @@
-<div class="comment-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); padding: 1.25rem; margin-top: 1rem; animation: fade-in 0.4s ease;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-weight: 600; color: hsl(var(--secondary)); font-family: var(--font-heading);"><i class="fa-regular fa-user"></i> {{ comment.author_name }}</span>
-        <span class="story-meta" style="font-size: 0.75rem;"><i class="fa-regular fa-clock"></i> {{ comment.created_at|date:"d M, Y H:i" }}</span>
+{% if moderation_message %}
+    <!-- Mensaje de moderación para el usuario que acaba de enviar -->
+    <div class="comment-card" style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--border-radius-sm); padding: 1.25rem; margin-top: 1rem; animation: fade-in 0.4s ease;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--info));">
+            <i class="fa-solid fa-clock"></i>
+            <span style="font-weight: 600; font-family: var(--font-heading);">Comentario enviado</span>
+        </div>
+        <p style="font-size: 0.9rem; color: hsl(var(--text-muted)); margin-top: 0.5rem;">
+            Tu comentario ha sido recibido y será visible una vez que sea aprobado por un moderador. ¡Gracias por participar!
+        </p>
     </div>
-    <div style="color: hsl(var(--text-primary)); white-space: pre-line; font-size: 0.95rem;">
-        {{ comment.content }}
+{% else %}
+    <div class="comment-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: var(--border-radius-sm); padding: 1.25rem; margin-top: 1rem; animation: fade-in 0.4s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600; color: hsl(var(--secondary)); font-family: var(--font-heading);"><i class="fa-regular fa-user"></i> {{ comment.author_name }}</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                {% if not comment.is_approved %}
+                    <span class="badge badge-draft" style="font-size: 0.65rem;"><i class="fa-solid fa-clock"></i> Pendiente</span>
+                {% endif %}
+                <span class="story-meta" style="font-size: 0.75rem;"><i class="fa-regular fa-clock"></i> {{ comment.created_at|date:"d M, Y H:i" }}</span>
+            </div>
+        </div>
+        <div style="color: hsl(var(--text-primary)); white-space: pre-line; font-size: 0.95rem;">
+            {{ comment.content }}
+        </div>
     </div>
-</div>
+{% endif %}
 
 {% if is_first %}
     <!-- Reemplazo fuera de banda (OOB) para ocultar el mensaje de no comentarios -->
