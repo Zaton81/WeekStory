@@ -42,13 +42,17 @@
                     {% if forloop.counter == 3 and banner_entre_historias %}
                         <div class="glass-card" style="grid-column: 1 / -1; padding: 1.5rem; text-align: center; border-color: rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; height: fit-content; margin-bottom: 1rem;">
                             <p class="story-meta" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; text-align: left; width: 100%;">Publicidad</p>
-                            <a href="{{ banner_entre_historias.link_url }}" target="_blank" style="width: 100%; display: block;">
-                                {% if banner_entre_historias.image %}
-                                    <img src="{{ banner_entre_historias.image.url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
-                                {% elif banner_entre_historias.image_url %}
-                                    <img src="{{ banner_entre_historias.image_url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
-                                {% endif %}
-                            </a>
+                            {% if banner_entre_historias.html_code %}
+                                {{ banner_entre_historias.html_code|safe }}
+                            {% else %}
+                                <a href="{{ banner_entre_historias.link_url }}" target="_blank" style="width: 100%; display: block;">
+                                    {% if banner_entre_historias.image %}
+                                        <img src="{{ banner_entre_historias.image.url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
+                                    {% elif banner_entre_historias.image_url %}
+                                        <img src="{{ banner_entre_historias.image_url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
+                                    {% endif %}
+                                </a>
+                            {% endif %}
                         </div>
                     {% endif %}
 
@@ -128,23 +132,20 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-            </div>
-
-            <!-- Scroll Infinito: Trigger HTMX para cargar la siguiente página -->
-            {% if page_obj.has_next %}
-                <div id="infinite-scroll-trigger"
-                     hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-                     hx-trigger="revealed"
-                     hx-swap="afterend"
-                     hx-target="#infinite-scroll-trigger"
-                     hx-swap="outerHTML"
-                     style="text-align: center; padding: 2rem 0;">
-                    <div class="infinite-scroll-loader">
-                        <div class="spinner"></div>
-                        <span class="story-meta">Cargando más historias...</span>
+                <!-- Scroll Infinito: Trigger HTMX para cargar la siguiente página (DENTRO del stories-grid) -->
+                {% if page_obj.has_next %}
+                    <div id="infinite-scroll-trigger"
+                         hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                         hx-trigger="revealed"
+                         hx-swap="outerHTML"
+                         style="grid-column: 1 / -1; text-align: center; padding: 2rem 0;">
+                        <div class="infinite-scroll-loader">
+                            <div class="spinner"></div>
+                            <span class="story-meta">Cargando más historias...</span>
+                        </div>
                     </div>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         {% else %}
             <div class="glass-card empty-state">
                 <div class="empty-state-icon">
@@ -194,13 +195,17 @@
             {% if banner_lateral %}
                 <div class="glass-card" style="padding: 1.25rem; text-align: center; border-color: rgba(255,255,255,0.05);">
                     <p class="story-meta" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; text-align: left;">Publicidad</p>
-                    <a href="{{ banner_lateral.link_url }}" target="_blank">
-                        {% if banner_lateral.image %}
-                            <img src="{{ banner_lateral.image.url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                        {% elif banner_lateral.image_url %}
-                            <img src="{{ banner_lateral.image_url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                        {% endif %}
-                    </a>
+                    {% if banner_lateral.html_code %}
+                        {{ banner_lateral.html_code|safe }}
+                    {% else %}
+                        <a href="{{ banner_lateral.link_url }}" target="_blank">
+                            {% if banner_lateral.image %}
+                                <img src="{{ banner_lateral.image.url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            {% elif banner_lateral.image_url %}
+                                <img src="{{ banner_lateral.image_url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            {% endif %}
+                        </a>
+                    {% endif %}
                 </div>
             {% endif %}
         </div>

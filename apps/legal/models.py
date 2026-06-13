@@ -9,6 +9,25 @@ class LegalPage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado el")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado el")
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from django.utils.text import slugify
+        super().clean()
+        if self.title:
+            self.title = self.title.strip()
+        if not self.slug and self.title:
+            self.slug = slugify(self.title)
+        if not self.slug:
+            raise ValidationError({"slug": "El slug no puede estar vacío y debe generarse a partir de un título válido."})
+
+    def save(self, *args, **kwargs):
+        from django.utils.text import slugify
+        if self.title:
+            self.title = self.title.strip()
+        if not self.slug and self.title:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Página Legal"
         verbose_name_plural = "Páginas Legales"

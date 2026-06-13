@@ -1,5 +1,5 @@
 """
-Extractions Celery Tasks - AI text extraction
+Extractions Celery Tasks - AI text extraction via Ollama
 """
 from celery import shared_task
 from django.conf import settings
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def extract_story_text_task(self, story_id):
     """
-    Extract key text from story using local AI models
+    Extract key text from story using Ollama local AI.
     
     Args:
         story_id: ID of the Story to extract from
@@ -34,15 +34,16 @@ def extract_story_text_task(self, story_id):
         job.started_at = timezone.now()
         job.save(update_fields=['started_at'])
         
-        # Run extraction (placeholder - implement actual AI logic)
-        extraction_result = {
-            'extracted_text': story.content[:500],  # Placeholder
-            'entities': {
-                'characters': [],
-                'locations': []
-            },
-            'confidence': 0.85
-        }
+        # Run AI extraction via Ollama
+        from .ai_service import OllamaService
+        ai = OllamaService()
+        
+        category_name = story.category.name if story.category else ""
+        extraction_result = ai.summarize_story(
+            title=story.title,
+            content=story.content,
+            category=category_name,
+        )
         
         # Save extraction
         extraction, created = TextExtraction.objects.update_or_create(
@@ -50,14 +51,16 @@ def extract_story_text_task(self, story_id):
             defaults={
                 'extracted_text': extraction_result['extracted_text'],
                 'entities': extraction_result['entities'],
-                'confidence_score': extraction_result['confidence'],
-                'model_version': 'v1.0'
+                'confidence_score': extraction_result['confidence_score'],
+                'model_version': extraction_result['model_version'],
+                'processing_time_ms': extraction_result['processing_time_ms'],
             }
         )
         
         # Update story and job
         story.extraction_status = 'completed'
-        story.save(update_fields=['extraction_status'])
+        story.extraction_error = ''
+        story.save(update_fields=['extraction_status', 'extraction_error'])
         
         job.status = 'completed'
         job.completed_at = timezone.now()
@@ -67,7 +70,12 @@ def extract_story_text_task(self, story_id):
         from apps.social_posts.tasks import generate_social_posts_task
         generate_social_posts_task.delay(extraction.id)
         
-        logger.info(f"Successfully extracted text from story {story_id}")
+        logger.info(
+            f"Successfully extracted text from story {story_id} "
+            f"(model={extraction_result['model_version']}, "
+            f"time={extraction_result['processing_time_ms']}ms, "
+            f"confidence={extraction_result['confidence_score']:.2f})"
+        )
         return {'status': 'completed', 'story_id': story_id}
         
     except Story.DoesNotExist:
@@ -89,7 +97,7 @@ def extract_story_text_task(self, story_id):
                 job.error_message = str(exc)
                 job.completed_at = timezone.now()
                 job.save(update_fields=['status', 'error_message', 'completed_at'])
-        except:
+        except Exception:
             pass
         
         # Retry with exponential backoff

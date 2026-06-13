@@ -2,6 +2,7 @@
     {% if story.extraction_status == 'pending' %}
         <div hx-get="{% url 'stories:extraction-status' story.id %}" 
              hx-trigger="every 4s" 
+             hx-target="#ai-status-{{ story.id }}"
              hx-swap="outerHTML" 
              style="display: inline-block;">
             <span class="badge ai-badge ai-badge-pending">
@@ -11,6 +12,7 @@
     {% elif story.extraction_status == 'processing' %}
         <div hx-get="{% url 'stories:extraction-status' story.id %}" 
              hx-trigger="every 3s" 
+             hx-target="#ai-status-{{ story.id }}"
              hx-swap="outerHTML" 
              style="display: inline-block;">
             <span class="badge ai-badge ai-badge-processing">

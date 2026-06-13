@@ -1,0 +1,173 @@
+{% load static %}
+{# Partial para feedback de acciones de publicación social (publicar, guardar, regenerar) #}
+<div id="post-{{ post.platform }}" class="tab-content active"
+     {% if post.status == 'scheduled' %}
+     hx-get="{% url 'stories:social-status' post.id %}"
+     hx-trigger="every 3s"
+     hx-swap="outerHTML"
+     {% endif %}>
+    <div class="post-preview-card">
+        <div class="platform-brand-header">
+            <div class="platform-name">
+                {% if post.platform == 'twitter' %}
+                    <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X
+                {% elif post.platform == 'linkedin' %}
+                    <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
+                {% elif post.platform == 'instagram' %}
+                    <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
+                {% elif post.platform == 'facebook' %}
+                    <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
+                {% endif %}
+            </div>
+            {% if post.status == 'published' %}
+                <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+            {% elif post.status == 'scheduled' %}
+                <span class="badge badge-scheduled"><i class="fa-solid fa-spinner fa-spin"></i> Publicando...</span>
+            {% elif post.status == 'accepted' %}
+                <span class="badge badge-published" style="background: rgba(16,185,129,0.15); color: #10b981;"><i class="fa-solid fa-square-check"></i> Aprobado (Listo)</span>
+            {% elif post.status == 'failed' %}
+                <span class="badge badge-draft" style="background: rgba(239,68,68,0.15); color: hsl(var(--danger));"><i class="fa-solid fa-triangle-exclamation"></i> Error</span>
+            {% else %}
+                <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador IA</span>
+            {% endif %}
+        </div>
+
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">{{ post.user_edited_text|default:post.generated_text }}</div>
+
+        {% if post.hashtags %}
+            <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                {% for tag in post.hashtags.split %}
+                    {% if tag|first == '#' %}
+                        <span class="pill pill-character" style="font-size: 0.75rem;">{{ tag }}</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if action_message %}
+            <div style="margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem;
+                {% if action_type == 'publishing' %}
+                    background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2); color: hsl(var(--secondary));
+                {% elif action_type == 'saved' %}
+                    background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.2); color: hsl(var(--success));
+                {% elif action_type == 'regenerated' %}
+                    background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); color: hsl(var(--accent-purple));
+                {% endif %}
+            ">
+                {% if action_type == 'publishing' %}
+                    <i class="fa-solid fa-paper-plane"></i>
+                {% elif action_type == 'saved' %}
+                    <i class="fa-solid fa-floppy-disk"></i>
+                {% elif action_type == 'regenerated' %}
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                {% endif %}
+                {{ action_message }}
+            </div>
+        {% endif %}
+
+        {% if post.status == 'failed' and post.error_message %}
+            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.85rem; color: hsl(var(--danger));">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ post.error_message }}
+            </div>
+        {% endif %}
+
+        {% if post.published_url %}
+            <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+                <a href="{{ post.published_url }}" target="_blank" style="color: hsl(var(--secondary));">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver publicación
+                </a>
+            </div>
+        {% endif %}
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
+            {% if post.status == 'draft' or post.status == 'failed' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-get="{% url 'stories:social-edit' post.id %}"
+                        hx-target="#post-{{ post.platform }}"
+                        hx-swap="outerHTML">
+                    <i class="fa-solid fa-pen"></i> Editar
+                </button>
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{% url 'stories:social-regenerate' post.id %}"
+                        hx-target="#post-{{ post.platform }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="¿Regenerar el borrador? Se perderán las ediciones manuales.">
+                    <i class="fa-solid fa-arrows-rotate"></i> Regenerar
+                </button>
+                <button class="btn btn-primary btn-sm"
+                        hx-post="{% url 'stories:social-approve' post.id %}"
+                        hx-target="#post-{{ post.platform }}"
+                        hx-swap="outerHTML">
+                    <i class="fa-solid fa-check"></i> Aprobar Borrador
+                </button>
+            {% elif post.status == 'accepted' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-get="{% url 'stories:social-edit' post.id %}"
+                        hx-target="#post-{{ post.platform }}"
+                        hx-swap="outerHTML">
+                    <i class="fa-solid fa-pen"></i> Editar
+                </button>
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{% url 'stories:social-reject' post.id %}"
+                        hx-target="#post-{{ post.platform }}"
+                        hx-swap="outerHTML">
+                    <i class="fa-solid fa-xmark"></i> Volver a Borrador
+                </button>
+                <button class="btn btn-primary btn-sm"
+                        onclick="openSocialPublishWindow_{{ post.id }}()"
+                        id="publish-btn-{{ post.id }}">
+                    <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
+                </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if post.status == 'accepted' %}
+<div id="social-data-{{ post.id }}" 
+     data-text="{{ post.user_edited_text|default:post.generated_text }}"
+     data-hashtags="{{ post.hashtags }}"
+     data-platform="{{ post.platform }}"
+     style="display:none;"></div>
+<script>
+(function() {
+    window['openSocialPublishWindow_{{ post.id }}'] = function() {
+        var dataEl = document.getElementById('social-data-{{ post.id }}');
+        var postText = dataEl.getAttribute('data-text');
+        var hashtags = dataEl.getAttribute('data-hashtags');
+        var fullText = hashtags ? postText + '\n\n' + hashtags : postText;
+        var platform = dataEl.getAttribute('data-platform');
+        var publishUrl = '';
+        var storyUrl = window.location.href;
+
+        if (platform === 'twitter') {
+            publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
+        } else if (platform === 'facebook') {
+            publishUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encodeURIComponent(fullText) + '&u=' + encodeURIComponent(storyUrl);
+        } else if (platform === 'linkedin') {
+            publishUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(storyUrl);
+        } else if (platform === 'instagram') {
+            navigator.clipboard.writeText(fullText).then(function() {
+                alert('📋 Texto copiado al portapapeles.\n\nAbre Instagram y pega el texto en tu nueva publicación.');
+                window.open('https://www.instagram.com/', '_blank');
+            }).catch(function() {
+                prompt('Copia el siguiente texto y publícalo en Instagram:', fullText);
+                window.open('https://www.instagram.com/', '_blank');
+            });
+        }
+
+        if (publishUrl) {
+            window.open(publishUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+        }
+
+        // Marcar como publicado en el servidor
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        htmx.ajax('POST', '{% url "stories:social-publish" post.id %}', {
+            target: '#post-{{ post.platform }}',
+            swap: 'outerHTML',
+            headers: { 'X-CSRFToken': csrfToken ? csrfToken.value : '{{ csrf_token }}' }
+        });
+    };
+})();
+</script>
+{% endif %}

@@ -91,4 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 400);
         });
     }
+
+    // 5. Toggle Mobile Menu Accordion
+    const togglerBtn = document.getElementById("navbarTogglerBtn");
+    const navbarNav = document.querySelector(".navbar-nav");
+
+    if (togglerBtn && navbarNav) {
+        togglerBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            navbarNav.classList.toggle("show");
+            const icon = togglerBtn.querySelector("i");
+            if (navbarNav.classList.contains("show")) {
+                icon.className = "fa-solid fa-xmark";
+            } else {
+                icon.className = "fa-solid fa-bars";
+            }
+        });
+    }
 });

@@ -51,6 +51,88 @@
                 <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
             </div>
         {% endif %}
+        
+        <!-- Reproductor de Audio (IA Local) -->
+        {% include 'stories/story_audio_partial.html' %}
+
+        <!-- Botones de Compartir (Visible para todos los usuarios) -->
+        {% if story.status == 'published' %}
+        <div class="share-buttons-bar glass-card" style="padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <span style="font-size: 0.9rem; font-weight: 600; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-share-nodes"></i> Compartir
+            </span>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <!-- Twitter/X -->
+                <button class="share-btn share-btn-twitter" onclick="shareStory('twitter')" title="Compartir en Twitter/X">
+                    <i class="fa-brands fa-x-twitter"></i>
+                </button>
+                <!-- Facebook -->
+                <button class="share-btn share-btn-facebook" onclick="shareStory('facebook')" title="Compartir en Facebook">
+                    <i class="fa-brands fa-facebook-f"></i>
+                </button>
+                <!-- LinkedIn -->
+                <button class="share-btn share-btn-linkedin" onclick="shareStory('linkedin')" title="Compartir en LinkedIn">
+                    <i class="fa-brands fa-linkedin-in"></i>
+                </button>
+                <!-- WhatsApp -->
+                <button class="share-btn share-btn-whatsapp" onclick="shareStory('whatsapp')" title="Compartir en WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </button>
+                <!-- Telegram -->
+                <button class="share-btn share-btn-telegram" onclick="shareStory('telegram')" title="Compartir en Telegram">
+                    <i class="fa-brands fa-telegram"></i>
+                </button>
+                <!-- Copiar enlace -->
+                <button class="share-btn share-btn-copy" onclick="copyStoryLink(this)" title="Copiar enlace">
+                    <i class="fa-solid fa-link"></i>
+                </button>
+            </div>
+        </div>
+        <script>
+            function shareStory(platform) {
+                var url = encodeURIComponent(window.location.href);
+                var title = encodeURIComponent('{{ story.title|escapejs }}');
+                var text = encodeURIComponent('{{ story.title|escapejs }}' + ' — ¡Léelo aquí!');
+                var shareUrl = '';
+
+                switch (platform) {
+                    case 'twitter':
+                        shareUrl = 'https://twitter.com/intent/tweet?text=' + text + '&url=' + url;
+                        break;
+                    case 'facebook':
+                        shareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + url;
+                        break;
+                    case 'linkedin':
+                        shareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + url;
+                        break;
+                    case 'whatsapp':
+                        shareUrl = 'https://api.whatsapp.com/send?text=' + text + '%20' + url;
+                        break;
+                    case 'telegram':
+                        shareUrl = 'https://t.me/share/url?url=' + url + '&text=' + text;
+                        break;
+                }
+                if (shareUrl) {
+                    window.open(shareUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+                }
+            }
+            function copyStoryLink(btn) {
+                navigator.clipboard.writeText(window.location.href).then(function() {
+                    var icon = btn.querySelector('i');
+                    icon.className = 'fa-solid fa-check';
+                    btn.style.background = 'rgba(74, 222, 128, 0.2)';
+                    btn.style.color = '#4ade80';
+                    btn.style.borderColor = 'rgba(74, 222, 128, 0.3)';
+                    setTimeout(function() {
+                        icon.className = 'fa-solid fa-link';
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                    }, 2000);
+                });
+            }
+        </script>
+        {% endif %}
 
         <!-- Tarjeta de Contenido de la Historia -->
         <div class="glass-card story-content-panel">
@@ -147,7 +229,7 @@
         {% if user.is_authenticated and user.is_staff %}
             <div class="glass-card social-dashboard">
                 <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Publicaciones en Redes Generadas</h2>
-                <p class="story-meta" style="margin-bottom: 1.5rem;">Borradores generados por IA local optimizados para distribución multiplataforma.</p>
+                <p class="story-meta" style="margin-bottom: 1.5rem;">Borradores generados por IA local (Ollama) optimizados para distribución multiplataforma.</p>
                 
                 {% if story.extraction %}
                     {% with posts=story.extraction.social_posts.all %}
@@ -173,37 +255,156 @@
                             
                             <!-- Contenidos de pestaña -->
                             {% for post in posts %}
-                                <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}">
+                                <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}"
+                                     {% if post.status == 'scheduled' %}
+                                     hx-get="{% url 'stories:social-status' post.id %}"
+                                     hx-trigger="every 3s"
+                                     hx-swap="outerHTML"
+                                     {% endif %}>
                                     <div class="post-preview-card">
                                         <div class="platform-brand-header">
                                             <div class="platform-name">
                                                 {% if post.platform == 'twitter' %}
-                                                    <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Borrador para Twitter/X
+                                                    <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X
                                                 {% elif post.platform == 'linkedin' %}
-                                                    <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> Borrador para LinkedIn
+                                                    <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
                                                 {% elif post.platform == 'instagram' %}
-                                                    <i class="fa-brands fa-instagram platform-icon-instagram"></i> Borrador para Instagram
+                                                    <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
                                                 {% elif post.platform == 'facebook' %}
-                                                    <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Borrador para Facebook
+                                                    <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
                                                 {% endif %}
                                             </div>
-                                            <span class="badge badge-draft"><i class="fa-solid fa-spinner"></i> Auto Borrador</span>
+                                            {% if post.status == 'published' %}
+                                                <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                                            {% elif post.status == 'scheduled' %}
+                                                <span class="badge badge-scheduled"><i class="fa-solid fa-spinner fa-spin"></i> Publicando...</span>
+                                            {% elif post.status == 'accepted' %}
+                                                <span class="badge badge-published" style="background: rgba(16,185,129,0.15); color: #10b981;"><i class="fa-solid fa-square-check"></i> Aprobado (Listo)</span>
+                                            {% elif post.status == 'failed' %}
+                                                <span class="badge badge-draft" style="background: rgba(239,68,68,0.15); color: hsl(var(--danger));"><i class="fa-solid fa-triangle-exclamation"></i> Error</span>
+                                            {% else %}
+                                                <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador IA</span>
+                                            {% endif %}
                                         </div>
                                         
-                                        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">
-                                            {{ post.generated_text }}
-                                        </div>
+                                        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">{{ post.user_edited_text|default:post.generated_text }}</div>
                                         
-                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
-                                            <button class="btn btn-secondary btn-sm" disabled title="Conexiones de API de cuentas sociales pendientes de implementación">
-                                                <i class="fa-solid fa-pen"></i> Editar Borrador
-                                            </button>
-                                            <button class="btn btn-primary btn-sm" disabled title="Configuración de credenciales OAuth requerida">
-                                                <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
-                                            </button>
+                                        {% if post.hashtags %}
+                                            <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                                                {% for tag in post.hashtags.split %}
+                                                    {% if tag|first == '#' %}
+                                                        <span class="pill pill-character" style="font-size: 0.75rem;">{{ tag }}</span>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if post.status == 'failed' and post.error_message %}
+                                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.85rem; color: hsl(var(--danger));">
+                                                <i class="fa-solid fa-circle-exclamation"></i> {{ post.error_message }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if post.published_url %}
+                                            <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+                                                <a href="{{ post.published_url }}" target="_blank" style="color: hsl(var(--secondary));">
+                                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver publicación
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
+                                            {% if post.status == 'draft' or post.status == 'failed' %}
+                                                <button class="btn btn-secondary btn-sm"
+                                                        hx-get="{% url 'stories:social-edit' post.id %}"
+                                                        hx-target="#post-{{ post.platform }}"
+                                                        hx-swap="outerHTML">
+                                                    <i class="fa-solid fa-pen"></i> Editar
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm"
+                                                        hx-post="{% url 'stories:social-regenerate' post.id %}"
+                                                        hx-target="#post-{{ post.platform }}"
+                                                        hx-swap="outerHTML"
+                                                        hx-confirm="¿Regenerar el borrador con IA? Se perderán las ediciones manuales.">
+                                                    <i class="fa-solid fa-arrows-rotate"></i> Regenerar
+                                                </button>
+                                                <button class="btn btn-primary btn-sm"
+                                                        hx-post="{% url 'stories:social-approve' post.id %}"
+                                                        hx-target="#post-{{ post.platform }}"
+                                                        hx-swap="outerHTML">
+                                                    <i class="fa-solid fa-check"></i> Aprobar Borrador
+                                                </button>
+                                            {% elif post.status == 'accepted' %}
+                                                <button class="btn btn-secondary btn-sm"
+                                                        hx-get="{% url 'stories:social-edit' post.id %}"
+                                                        hx-target="#post-{{ post.platform }}"
+                                                        hx-swap="outerHTML">
+                                                    <i class="fa-solid fa-pen"></i> Editar
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm"
+                                                        hx-post="{% url 'stories:social-reject' post.id %}"
+                                                        hx-target="#post-{{ post.platform }}"
+                                                        hx-swap="outerHTML">
+                                                    <i class="fa-solid fa-xmark"></i> Volver a Borrador
+                                                </button>
+                                                <button class="btn btn-primary btn-sm"
+                                                        onclick="openSocialPublishWindow_{{ post.id }}()"
+                                                        id="publish-btn-init-{{ post.id }}">
+                                                    <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
+                                                </button>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
+                            {% endfor %}
+
+                            {# JavaScript para los botones de publicar en ventana nativa #}
+                            {% for post in posts %}
+                                {% if post.status == 'accepted' %}
+                                <div id="social-data-{{ post.id }}" 
+                                     data-text="{{ post.user_edited_text|default:post.generated_text }}"
+                                     data-hashtags="{{ post.hashtags }}"
+                                     data-platform="{{ post.platform }}"
+                                     style="display:none;"></div>
+                                <script>
+                                (function() {
+                                    window['openSocialPublishWindow_{{ post.id }}'] = function() {
+                                        var dataEl = document.getElementById('social-data-{{ post.id }}');
+                                        var postText = dataEl.getAttribute('data-text');
+                                        var hashtags = dataEl.getAttribute('data-hashtags');
+                                        var fullText = hashtags ? postText + '\n\n' + hashtags : postText;
+                                        var platform = dataEl.getAttribute('data-platform');
+                                        var publishUrl = '';
+                                        var storyUrl = window.location.href;
+
+                                        if (platform === 'twitter') {
+                                            publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
+                                        } else if (platform === 'facebook') {
+                                            publishUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encodeURIComponent(fullText) + '&u=' + encodeURIComponent(storyUrl);
+                                        } else if (platform === 'linkedin') {
+                                            publishUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(storyUrl);
+                                        } else if (platform === 'instagram') {
+                                            navigator.clipboard.writeText(fullText).then(function() {
+                                                alert('📋 Texto copiado al portapapeles.\n\nAbre Instagram y pega el texto en tu nueva publicación.');
+                                                window.open('https://www.instagram.com/', '_blank');
+                                            }).catch(function() {
+                                                prompt('Copia el siguiente texto y publícalo en Instagram:', fullText);
+                                                window.open('https://www.instagram.com/', '_blank');
+                                            });
+                                        }
+                                        if (publishUrl) {
+                                            window.open(publishUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+                                        }
+                                        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                                        htmx.ajax('POST', '{% url "stories:social-publish" post.id %}', {
+                                            target: '#post-{{ post.platform }}',
+                                            swap: 'outerHTML',
+                                            headers: { 'X-CSRFToken': csrfToken ? csrfToken.value : '{{ csrf_token }}' }
+                                        });
+                                    };
+                                })();
+                                </script>
+                                {% endif %}
                             {% endfor %}
                         {% else %}
                             <div class="empty-state" style="padding: 2rem 1rem;">

@@ -45,6 +45,7 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       ALLOWED_HOSTS: localhost,127.0.0.1,web
+      OLLAMA_API_URL: http://ollama:11434
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
@@ -72,6 +73,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      OLLAMA_API_URL: http://ollama:11434
     volumes:
       - .:/app
       - models_volume:/app/models
@@ -79,6 +81,7 @@ services:
       - db
       - redis
       - web
+      - ollama
     healthcheck:
       test: ["CMD", "celery", "-A", "weekstory", "inspect", "active"]
       interval: 30s
@@ -103,6 +106,20 @@ services:
       - redis
       - web
 
+  # Ollama - Local AI Model Server
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   # Nginx Reverse Proxy (Optional, for production)
   nginx:
     image: nginx:latest
@@ -122,3 +139,4 @@ volumes:
   static_volume:
   media_volume:
   models_volume:
+  ollama_data:
