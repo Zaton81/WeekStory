@@ -39,6 +39,7 @@ class SocialPost(models.Model):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('accepted', 'Accepted'),
         ('scheduled', 'Scheduled'),
         ('published', 'Published'),
         ('failed', 'Failed'),

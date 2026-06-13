@@ -1,0 +1,218 @@
+{% load static %}
+<div id="story-audio-player-container" class="glass-card" style="margin-top: 1.5rem; padding: 1.5rem; border-radius: 16px; position: relative; overflow: hidden; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.08);">
+    {% if info_message %}
+        <div style="position: absolute; top: 0.5rem; right: 0.5rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 4px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); color: hsl(var(--success));" hx-on="load: setTimeout(() => this.remove(), 3000)">
+            {{ info_message }}
+        </div>
+    {% endif %}
+
+    {% if story.audio_status == 'pending' or story.audio_status == 'processing' %}
+        <div id="audio-loading-state" 
+             hx-get="{% url 'stories:audio-status' story.pk %}" 
+             hx-trigger="every 4s" 
+             hx-target="#story-audio-player-container"
+             hx-swap="outerHTML"
+             style="display: flex; align-items: center; gap: 1rem; color: hsl(var(--text-muted));">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #38bdf8;"></i>
+            <div>
+                <span style="font-weight: 600; color: hsl(var(--text-primary)); display: block; margin-bottom: 0.2rem;">El audio se está generando</span>
+            </div>
+        </div>
+    {% elif story.audio_status == 'failed' %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; color: hsl(var(--danger));">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 1.5rem;"></i>
+                <div>
+                    <strong style="color: hsl(var(--text-primary)); display: block;">Error al generar el audio de la historia</strong>
+                    <span style="font-size: 0.85rem; color: hsl(var(--text-muted));">{{ story.audio_error|default:"Error desconocido en la síntesis local." }}</span>
+                </div>
+            </div>
+            {% if user.is_authenticated and user.is_staff %}
+                <div style="margin-top: 0.5rem;">
+                    <button hx-post="{% url 'stories:audio-regenerate' story.pk %}" 
+                            hx-target="#story-audio-player-container" 
+                            hx-swap="outerHTML" 
+                            class="btn btn-primary btn-sm"
+                            style="padding: 0.5rem 1rem; border-radius: 8px;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Reintentar generación
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    {% elif story.audio_status == 'completed' and story.audio_file %}
+        <!-- Reproductor de Audio Premium -->
+        <div id="premium-audio-player" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Elemento de Audio Oculto -->
+            <audio id="story-audio-element" src="{{ story.audio_file.url }}" preload="metadata"></audio>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <!-- Botón de Reproducción Circular Gigante -->
+                    <button id="audio-play-pause-btn" 
+                            onclick="togglePlayPause()"
+                            style="width: 50px; height: 50px; border-radius: 50%; border: none; background: linear-gradient(135deg, #a78bfa 0%, #38bdf8 100%); color: #000; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s ease, filter 0.2s ease; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3); outline: none;">
+                        <i id="play-icon" class="fa-solid fa-play" style="margin-left: 2px;"></i>
+                    </button>
+                    
+                    <div>
+                        <strong style="font-family: var(--font-heading); font-size: 1.1rem; color: hsl(var(--text-primary)); display: block;">Escuchar Audiolibro IA</strong>
+                        <span style="font-size: 0.85rem; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 0.5rem;">
+                            Narrador{% if story.audio_voice == 'em_alex' %}:&nbsp;<strong>Álex</strong> (Masculina){% elif story.audio_voice == 'ef_dora' %}:&nbsp;<strong>Dora</strong> (Femenina){% else %}a IA en Español{% endif %}
+                            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">IA Local</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Ecualizador / Ondas de Sonido Animadas -->
+                <div id="soundwave-container" class="soundwave-visualizer" style="display: flex; align-items: flex-end; gap: 3px; height: 30px; margin-right: 0.5rem;">
+                    <div class="soundwave-bar bar-1" style="width: 3px; height: 8px; background: #38bdf8; border-radius: 3px; transition: height 0.1s ease;"></div>
+                    <div class="soundwave-bar bar-2" style="width: 3px; height: 14px; background: #a78bfa; border-radius: 3px; transition: height 0.1s ease;"></div>
+                    <div class="soundwave-bar bar-3" style="width: 3px; height: 10px; background: #4ade80; border-radius: 3px; transition: height 0.1s ease;"></div>
+                    <div class="soundwave-bar bar-4" style="width: 3px; height: 18px; background: #38bdf8; border-radius: 3px; transition: height 0.1s ease;"></div>
+                    <div class="soundwave-bar bar-5" style="width: 3px; height: 6px; background: #a78bfa; border-radius: 3px; transition: height 0.1s ease;"></div>
+                </div>
+            </div>
+
+            <!-- Controles e Indicadores de Progreso -->
+            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                <span id="audio-current-time" style="font-size: 0.8rem; color: hsl(var(--text-muted)); font-family: monospace; min-width: 40px; text-align: right;">00:00</span>
+                
+                <!-- Barra de Progreso -->
+                <div id="audio-timeline-bg" 
+                     onclick="seekAudio(event)"
+                     style="flex-grow: 1; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; cursor: pointer; position: relative;">
+                    <div id="audio-timeline-fill" 
+                         style="width: 0%; height: 100%; background: linear-gradient(90deg, #a78bfa, #38bdf8); border-radius: 3px; position: absolute; left: 0; top: 0; transition: width 0.15s linear;"></div>
+                </div>
+                
+                <span id="audio-duration" style="font-size: 0.8rem; color: hsl(var(--text-muted)); font-family: monospace; min-width: 40px;">--:--</span>
+            </div>
+
+            {% if user.is_authenticated and user.is_staff %}
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem;">
+                    <span style="font-size: 0.8rem; color: hsl(var(--text-muted)); align-self: center; margin-right: auto;">
+                        <i class="fa-solid fa-circle-check" style="color: #4ade80;"></i> Audio listo
+                    </span>
+                    <button hx-post="{% url 'stories:audio-regenerate' story.pk %}" 
+                            hx-target="#story-audio-player-container" 
+                            hx-confirm="¿Regenerar la síntesis de audio de esta historia?"
+                            hx-swap="outerHTML" 
+                            class="btn btn-secondary btn-sm"
+                            style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: hsl(var(--text-primary));">
+                        <i class="fa-solid fa-arrows-rotate"></i> Regenerar Audio
+                    </button>
+                </div>
+            {% endif %}
+            
+            <!-- Estilos y Scripts Locales Autocontenidos -->
+            <style>
+                .soundwave-visualizer.playing .soundwave-bar {
+                    animation: wave-bounce-effect 0.8s infinite alternate ease-in-out;
+                }
+                .soundwave-visualizer.playing .bar-1 { animation-delay: 0.1s; }
+                .soundwave-visualizer.playing .bar-2 { animation-delay: 0.4s; }
+                .soundwave-visualizer.playing .bar-3 { animation-delay: 0.25s; }
+                .soundwave-visualizer.playing .bar-4 { animation-delay: 0.5s; }
+                .soundwave-visualizer.playing .bar-5 { animation-delay: 0.15s; }
+                
+                @keyframes wave-bounce-effect {
+                    0% { height: 6px; }
+                    100% { height: 28px; }
+                }
+                #audio-play-pause-btn:hover {
+                    transform: scale(1.05);
+                    filter: brightness(1.1);
+                }
+            </style>
+            
+            <script>
+                (function() {
+                    const audio = document.getElementById('story-audio-element');
+                    const playPauseBtn = document.getElementById('audio-play-pause-btn');
+                    const playIcon = document.getElementById('play-icon');
+                    const progressFill = document.getElementById('audio-timeline-fill');
+                    const timelineBg = document.getElementById('audio-timeline-bg');
+                    const currentTimeLabel = document.getElementById('audio-current-time');
+                    const durationLabel = document.getElementById('audio-duration');
+                    const soundwave = document.getElementById('soundwave-container');
+                    
+                    if (!audio) return;
+                    
+                    // Formatear segundos en MM:SS
+                    function formatTime(secs) {
+                        if (isNaN(secs)) return '--:--';
+                        const minutes = Math.floor(secs / 60);
+                        const seconds = Math.floor(secs % 60);
+                        const returnedSeconds = seconds < 10 ? `0${seconds}` : `${seconds}`;
+                        const returnedMinutes = minutes < 10 ? `0${minutes}` : `${minutes}`;
+                        return `${returnedMinutes}:${returnedSeconds}`;
+                    }
+                    
+                    // Cargar metadatos
+                    audio.addEventListener('loadedmetadata', () => {
+                        durationLabel.textContent = formatTime(audio.duration);
+                    });
+                    
+                    // Si ya están precargados (fallback)
+                    if (audio.readyState >= 1) {
+                        durationLabel.textContent = formatTime(audio.duration);
+                    }
+                    
+                    // Actualizar el tiempo de progreso
+                    audio.addEventListener('timeupdate', () => {
+                        if (audio.duration) {
+                            const pct = (audio.currentTime / audio.duration) * 100;
+                            progressFill.style.width = `${pct}%`;
+                            currentTimeLabel.textContent = formatTime(audio.currentTime);
+                        }
+                    });
+                    
+                    // Control de reproducción
+                    window.togglePlayPause = function() {
+                        if (audio.paused) {
+                            audio.play();
+                            playIcon.className = 'fa-solid fa-pause';
+                            soundwave.classList.add('playing');
+                        } else {
+                            audio.pause();
+                            playIcon.className = 'fa-solid fa-play';
+                            soundwave.classList.remove('playing');
+                        }
+                    };
+                    
+                    // Fin del audio
+                    audio.addEventListener('ended', () => {
+                        playIcon.className = 'fa-solid fa-play';
+                        soundwave.classList.remove('playing');
+                        progressFill.style.width = '0%';
+                        currentTimeLabel.textContent = '00:00';
+                    });
+                    
+                    // Saltar a un punto en la línea de tiempo
+                    window.seekAudio = function(e) {
+                        const rect = timelineBg.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const width = rect.width;
+                        const percentage = clickX / width;
+                        if (audio.duration) {
+                            audio.currentTime = percentage * audio.duration;
+                        }
+                    };
+                })();
+            </script>
+        </div>
+    {% else %}
+        <div style="display: flex; align-items: center; justify-content: space-between; color: hsl(var(--text-muted)); font-size: 0.95rem;">
+            <span>No se ha generado el audiolibro de esta historia.</span>
+            {% if user.is_authenticated and user.is_staff %}
+                <button hx-post="{% url 'stories:audio-regenerate' story.pk %}" 
+                        hx-target="#story-audio-player-container" 
+                        hx-swap="outerHTML" 
+                        class="btn btn-primary btn-sm"
+                        style="padding: 0.4rem 0.8rem; border-radius: 8px;">
+                    <i class="fa-solid fa-circle-play"></i> Generar Versión Audio
+                </button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>

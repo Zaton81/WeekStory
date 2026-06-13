@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'whitenoise.runserver_nostatic',
+    'django_ckeditor_5',
     
     # WeekStory apps
     'apps.stories',
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'apps.ai_models',
     'apps.legal',
     'apps.social_links',
+    'apps.pages',
 ]
 
 MIDDLEWARE = [
@@ -116,6 +118,29 @@ STATICFILES_DIRS = [
 # Media files (User uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# CKEditor 5 Configuration
+CKEDITOR_5_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+CKEDITOR_5_UPLOAD_PATH = 'ckeditor/uploads/'
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'heading', '|',
+            'bold', 'italic', 'underline', 'strikethrough', '|',
+            'bulletedList', 'numberedList', 'blockQuote', '|',
+            'link', 'imageUpload', '|',
+            'undo', 'redo',
+        ],
+        'image': {
+            'toolbar': [
+                'imageTextAlternative', 'imageStyle:inline',
+                'imageStyle:block', 'imageStyle:side',
+            ],
+        },
+        'height': '400px',
+        'width': '100%',
+    },
+}
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

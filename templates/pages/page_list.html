@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Páginas{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding-top: 2vh;">
+    <div style="margin-bottom: 2rem;">
+        <h1 class="gradient-text"><i class="fa-solid fa-file-lines"></i> Páginas</h1>
+    </div>
+    
+    <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+        {% for page in pages %}
+            <a href="{% url 'pages:page-detail' page.slug %}" class="glass-card" style="text-decoration: none; display: flex; flex-direction: column; gap: 1rem;">
+                {% if page.cover_image %}
+                    <div class="story-cover-thumb">
+                        <img src="{{ page.cover_image.url }}" alt="{{ page.title }}">
+                    </div>
+                {% endif %}
+                <div>
+                    <h3 style="color: hsl(var(--text-primary));"><i class="{{ page.icon_class }}"></i> {{ page.title }}</h3>
+                    {% if page.excerpt %}
+                        <p class="story-meta" style="margin-top: 0.5rem;">{{ page.excerpt|truncatechars:120 }}</p>
+                    {% endif %}
+                </div>
+            </a>
+        {% empty %}
+            <div class="glass-card empty-state" style="grid-column: 1 / -1;">
+                <h2>No hay páginas aún</h2>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -83,11 +83,29 @@ document.addEventListener('DOMContentLoaded', () => {
         acceptCookiesBtn.addEventListener("click", () => {
             // Set cookie for 1 year (31536000 seconds)
             document.cookie = "cookies_accepted=true; max-age=31536000; path=/";
+            cookieBanner.style.animation = 'none';
             cookieBanner.style.opacity = '0';
             cookieBanner.style.transition = 'opacity 0.4s ease';
             setTimeout(() => {
                 cookieBanner.style.display = 'none';
             }, 400);
+        });
+    }
+
+    // 5. Toggle Mobile Menu Accordion
+    const togglerBtn = document.getElementById("navbarTogglerBtn");
+    const navbarNav = document.querySelector(".navbar-nav");
+
+    if (togglerBtn && navbarNav) {
+        togglerBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            navbarNav.classList.toggle("show");
+            const icon = togglerBtn.querySelector("i");
+            if (navbarNav.classList.contains("show")) {
+                icon.className = "fa-solid fa-xmark";
+            } else {
+                icon.className = "fa-solid fa-bars";
+            }
         });
     }
 });

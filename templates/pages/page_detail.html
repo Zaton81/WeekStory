@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding-top: 2vh;">
+    <div style="margin-bottom: 2rem;">
+        <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Volver a Historias</a>
+        <h1 class="gradient-text" style="margin-top: 0.5rem; font-size: 2.5rem;">
+            <i class="{{ page.icon_class }}" style="font-size: 2rem;"></i> {{ page.title }}
+        </h1>
+        {% if page.excerpt %}
+            <p class="story-meta" style="margin-top: 0.5rem; font-size: 1rem;">{{ page.excerpt }}</p>
+        {% endif %}
+    </div>
+
+    {% if page.cover_image %}
+        <div class="story-cover-full" style="margin-bottom: 2rem;">
+            <img src="{{ page.cover_image.url }}" alt="{{ page.title }}">
+        </div>
+    {% endif %}
+    
+    <div class="glass-card ck-content" style="line-height: 1.8; font-size: 1.05rem; color: hsl(var(--text-primary)); padding: 2.5rem;">
+        {{ page.content|safe }}
+    </div>
+</div>
+{% endblock %}

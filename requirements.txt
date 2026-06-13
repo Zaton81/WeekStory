@@ -6,6 +6,7 @@ django-celery-results==2.5.1
 django-environ==0.11.2
 python-decouple==3.8
 dj-database-url==2.1.0
+django-ckeditor-5==0.2.15
 
 # Database
 psycopg2-binary==2.9.9
@@ -15,15 +16,9 @@ sqlparse==0.4.4
 celery==5.3.6
 redis==5.0.1
 
-# AI/NLP Models
-transformers==4.40.2
-torch==2.2.1
-torchvision==0.17.1
-torchaudio==2.2.1
-spacy==3.7.2
-scikit-learn==1.4.2
-numpy
-scipy
+# AI/NLP - Ollama via HTTP API (no heavy local models needed)
+# Models run in the separate ollama container
+requests>=2.31.0
 
 # Social Media APIs
 tweepy==4.14.0

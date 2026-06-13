@@ -1,0 +1,13 @@
+{% if results %}
+<div class="search-results-dropdown">
+    {% for story in results %}
+        <a href="{% url 'stories:story-detail' story.id %}" class="search-result-item">
+            <i class="fa-solid fa-feather-pointed" style="color: hsl(var(--secondary)); font-size: 0.8rem;"></i>
+            <div>
+                <strong>{{ story.title }}</strong>
+                {% if story.category %}<span class="badge badge-category" style="font-size: 0.6rem; padding: 0.1rem 0.3rem; margin-left: 0.25rem;">{{ story.category.name }}</span>{% endif %}
+            </div>
+        </a>
+    {% endfor %}
+</div>
+{% endif %}

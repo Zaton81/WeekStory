@@ -4,8 +4,12 @@
     {% if object %}Editar Historia: {{ object.title }}{% else %}Escribir Nueva Historia{% endif %}
 {% endblock %}
 
+{% block extra_head %}
+    {{ form.media }}
+{% endblock %}
+
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto;">
+<div style="max-width: 900px; margin: 0 auto;">
     <div style="margin-bottom: 2rem;">
         <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Volver al Panel de Control</a>
         <h1 class="gradient-text" style="margin-top: 0.5rem;">
@@ -15,7 +19,7 @@
     </div>
     
     <div class="glass-card">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             {% if form.non_field_errors %}
@@ -27,23 +31,43 @@
             {% endif %}
             
             <div class="form-group">
-                <label for="{{ form.title.id_for_label }}" class="form-label">Título de la historia</label>
+                <label for="{{ form.title.id_for_label }}" class="form-label">Título de la historia <span style="color: hsl(var(--danger));">*</span></label>
                 {{ form.title }}
                 {% if form.title.errors %}
                     <div class="error-text">{{ form.title.errors.0 }}</div>
                 {% endif %}
             </div>
             
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="{{ form.category.id_for_label }}" class="form-label">Categoría</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div class="error-text">{{ form.category.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.new_category_name.id_for_label }}" class="form-label">{{ form.new_category_name.label }}</label>
+                    {{ form.new_category_name }}
+                </div>
+            </div>
+
             <div class="form-group">
-                <label for="{{ form.category.id_for_label }}" class="form-label">Categoría</label>
-                {{ form.category }}
-                {% if form.category.errors %}
-                    <div class="error-text">{{ form.category.errors.0 }}</div>
+                <label for="{{ form.cover_image.id_for_label }}" class="form-label">Imagen de Portada</label>
+                {% if object and object.cover_image %}
+                    <div style="margin-bottom: 0.75rem;">
+                        <img src="{{ object.cover_image.url }}" alt="Portada actual" style="max-height: 150px; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border);">
+                        <p class="story-meta" style="margin-top: 0.25rem; font-size: 0.75rem;">Imagen actual. Sube una nueva para reemplazarla.</p>
+                    </div>
+                {% endif %}
+                {{ form.cover_image }}
+                {% if form.cover_image.errors %}
+                    <div class="error-text">{{ form.cover_image.errors.0 }}</div>
                 {% endif %}
             </div>
             
             <div class="form-group">
-                <label for="{{ form.content.id_for_label }}" class="form-label">Contenido</label>
+                <label for="{{ form.content.id_for_label }}" class="form-label">Contenido <span style="color: hsl(var(--danger));">*</span></label>
                 {{ form.content }}
                 {% if form.content.errors %}
                     <div class="error-text">{{ form.content.errors.0 }}</div>
@@ -57,13 +81,24 @@
                     <div class="error-text">{{ form.excerpt.errors.0 }}</div>
                 {% endif %}
             </div>
-            
-            <div class="form-group">
-                <label for="{{ form.status.id_for_label }}" class="form-label">Estado de publicación</label>
-                {{ form.status }}
-                {% if form.status.errors %}
-                    <div class="error-text">{{ form.status.errors.0 }}</div>
-                {% endif %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">Estado de publicación</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="error-text">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group" id="scheduled-at-group" style="display: none;">
+                    <label for="{{ form.scheduled_at.id_for_label }}" class="form-label">Fecha y hora de publicación <span style="color: hsl(var(--danger));">*</span></label>
+                    {{ form.scheduled_at }}
+                    {% if form.scheduled_at.errors %}
+                        <div class="error-text">{{ form.scheduled_at.errors.0 }}</div>
+                    {% endif %}
+                    <p class="story-meta" style="margin-top: 0.25rem; font-size: 0.75rem;">La historia se publicará automáticamente en la fecha indicada.</p>
+                </div>
             </div>
             
             <div style="display: flex; gap: 1rem; margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
@@ -77,4 +112,25 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show/hide scheduled_at field based on status selection
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusSelect = document.getElementById('id_status');
+        const scheduledGroup = document.getElementById('scheduled-at-group');
+        
+        function toggleScheduled() {
+            if (statusSelect && scheduledGroup) {
+                scheduledGroup.style.display = statusSelect.value === 'scheduled' ? 'block' : 'none';
+            }
+        }
+        
+        if (statusSelect) {
+            statusSelect.addEventListener('change', toggleScheduled);
+            toggleScheduled(); // Check initial state
+        }
+    });
+</script>
 {% endblock %}

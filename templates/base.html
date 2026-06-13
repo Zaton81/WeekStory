@@ -14,8 +14,42 @@
     
     <!-- Estilos de tema personalizados -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    {% block extra_head %}{% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    <!-- Barra de Administración Exclusiva (Admin Bar) -->
+    {% if user.is_authenticated and user.is_staff %}
+        <div class="admin-bar">
+            <div class="container admin-bar-wrapper">
+                <div class="admin-bar-left">
+                    <i class="fa-solid fa-screwdriver-wrench text-secondary"></i>
+                    <span class="admin-bar-title">PANEL DE CONTROL</span>
+                </div>
+                <div class="admin-bar-right">
+                    <a href="{% url 'admin:index' %}" class="nav-link-admin" target="_blank">
+                        <i class="fa-solid fa-gauge"></i> Panel Django
+                    </a>
+                    <a href="{% url 'stories:story-list' %}" class="nav-link-admin {% if request.resolver_match.url_name == 'story-list' %}active{% endif %}">
+                        <i class="fa-solid fa-list-check"></i> Gestor Historias
+                    </a>
+                    <a href="{% url 'stories:story-create' %}" class="nav-link-admin {% if request.resolver_match.url_name == 'story-create' %}active{% endif %}">
+                        <i class="fa-solid fa-circle-plus"></i> Escribir Historia
+                    </a>
+                    <span class="admin-user-greeting">
+                        <i class="fa-regular fa-user"></i> Admin: <strong>{{ user.username }}</strong>
+                    </span>
+                    <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary btn-xs" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; height: auto;">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Salir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
     <!-- Cabecera de Navegación -->
     <nav class="navbar">
@@ -23,6 +57,11 @@
             <a href="{% url 'stories:story-list' %}" class="navbar-brand">
                 <span class="gradient-text"><i class="fa-solid fa-feather-pointed"></i> WeekStory</span>
             </a>
+            
+            <!-- Botón Hamburguesa para Móvil -->
+            <button class="navbar-toggler" id="navbarTogglerBtn" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             
             <ul class="navbar-nav">
                 <!-- Desplegable de Categorías para todos los usuarios -->
@@ -41,43 +80,35 @@
                     </ul>
                 </li>
 
+                <!-- Páginas Personales en el Navbar -->
+                {% for p_page in personal_pages %}
+                    <li>
+                        <a href="{% url 'pages:page-detail' p_page.slug %}" class="nav-link">
+                            <i class="{{ p_page.icon_class }}"></i> {{ p_page.title }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                <!-- Buscador en el Navbar -->
+                <li class="search-wrapper">
+                    <form action="{% url 'stories:story-list' %}" method="get" class="search-form" id="navSearchForm">
+                        <div class="search-box">
+                            <input type="text" name="q" placeholder="Buscar historias..." value="{{ request.GET.q }}" class="search-input" id="navSearchInput" autocomplete="off">
+                            <button type="submit" class="search-btn" aria-label="Buscar">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                        </div>
+                    </form>
+                </li>
+
                 <!-- Redes Sociales en el Navbar -->
                 {% if social_networks %}
-                    <li style="display: flex; gap: 0.75rem; align-items: center; margin-right: 0.5rem; padding-right: 0.75rem; border-right: 1px solid var(--glass-border);">
+                    <li class="social-networks-nav" style="display: flex; gap: 0.75rem; align-items: center; margin-right: 0.5rem; padding-right: 0.75rem; border-right: 1px solid var(--glass-border);">
                         {% for net in social_networks %}
                             <a href="{{ net.url }}" target="_blank" class="story-meta" title="{{ net.name }}" style="font-size: 1.05rem; transition: var(--transition);">
                                 <i class="{{ net.icon_class }}"></i>
                             </a>
                         {% endfor %}
-                    </li>
-                {% endif %}
-
-                {% if user.is_authenticated and user.is_staff %}
-                    <li>
-                        <a href="{% url 'admin:index' %}" class="nav-link">
-                            <i class="fa-solid fa-gauge"></i> Panel Admin
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'stories:story-list' %}" class="nav-link {% if request.resolver_match.url_name == 'story-list' %}active{% endif %}">
-                            <i class="fa-solid fa-list-check"></i> Panel de Control
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'stories:story-create' %}" class="nav-link {% if request.resolver_match.url_name == 'story-create' %}active{% endif %}">
-                            <i class="fa-solid fa-circle-plus"></i> Nueva Historia
-                        </a>
-                    </li>
-                    <li style="margin-left: 1rem; border-left: 1px solid var(--glass-border); padding-left: 1rem;">
-                        <span class="story-meta"><i class="fa-regular fa-user"></i> Admin: {{ user.username }}</span>
-                    </li>
-                    <li>
-                        <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
-                            </button>
-                        </form>
                     </li>
                 {% endif %}
             </ul>
@@ -111,13 +142,17 @@
             <!-- Banner Superior (Publicidad) -->
             {% if banner_arriba %}
                 <div style="margin-bottom: 2rem; text-align: center;">
-                    <a href="{{ banner_arriba.link_url }}" target="_blank">
-                        {% if banner_arriba.image %}
-                            <img src="{{ banner_arriba.image.url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
-                        {% elif banner_arriba.image_url %}
-                            <img src="{{ banner_arriba.image_url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
-                        {% endif %}
-                    </a>
+                    {% if banner_arriba.html_code %}
+                        {{ banner_arriba.html_code|safe }}
+                    {% else %}
+                        <a href="{{ banner_arriba.link_url }}" target="_blank">
+                            {% if banner_arriba.image %}
+                                <img src="{{ banner_arriba.image.url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                            {% elif banner_arriba.image_url %}
+                                <img src="{{ banner_arriba.image_url }}" alt="{{ banner_arriba.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                            {% endif %}
+                        </a>
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -126,13 +161,17 @@
             <!-- Banner Inferior (Publicidad) -->
             {% if banner_abajo %}
                 <div style="margin-top: 3rem; text-align: center;">
-                    <a href="{{ banner_abajo.link_url }}" target="_blank">
-                        {% if banner_abajo.image %}
-                            <img src="{{ banner_abajo.image.url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
-                        {% elif banner_abajo.image_url %}
-                            <img src="{{ banner_abajo.image_url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
-                        {% endif %}
-                    </a>
+                    {% if banner_abajo.html_code %}
+                        {{ banner_abajo.html_code|safe }}
+                    {% else %}
+                        <a href="{{ banner_abajo.link_url }}" target="_blank">
+                            {% if banner_abajo.image %}
+                                <img src="{{ banner_abajo.image.url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                            {% elif banner_abajo.image_url %}
+                                <img src="{{ banner_abajo.image_url }}" alt="{{ banner_abajo.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); max-height: 120px; object-fit: contain;">
+                            {% endif %}
+                        </a>
+                    {% endif %}
                 </div>
             {% endif %}
         </div>
@@ -154,14 +193,17 @@
             
             <p>&copy; {% now "Y" %} WeekStory. Potenciado por Django, IA local y HTMX. Todos los derechos reservados.</p>
             
-            <!-- Enlaces de páginas legales -->
-            {% if legal_pages %}
-                <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+            <!-- Enlaces de páginas legales y personales -->
+            <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; flex-wrap: wrap;">
+                {% for p_page in personal_pages %}
+                    <a href="{% url 'pages:page-detail' p_page.slug %}" class="story-meta" style="text-decoration: underline;">{{ p_page.title }}</a>
+                {% endfor %}
+                {% if legal_pages %}
                     {% for page in legal_pages %}
                         <a href="{% url 'legal:detail' page.slug %}" class="story-meta" style="text-decoration: underline;">{{ page.title }}</a>
                     {% endfor %}
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </footer>
 
@@ -194,5 +236,6 @@
 
     <!-- Lógica de Frontend Personalizada -->
     <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
