@@ -7,16 +7,28 @@
     {% endif %}
 
     {% if story.audio_status == 'pending' or story.audio_status == 'processing' %}
-        <div id="audio-loading-state" 
-             hx-get="{% url 'stories:audio-status' story.pk %}" 
-             hx-trigger="every 4s" 
-             hx-target="#story-audio-player-container"
-             hx-swap="outerHTML"
-             style="display: flex; align-items: center; gap: 1rem; color: hsl(var(--text-muted));">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #38bdf8;"></i>
-            <div>
-                <span style="font-weight: 600; color: hsl(var(--text-primary)); display: block; margin-bottom: 0.2rem;">El audio se está generando</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div id="audio-loading-state" 
+                 hx-get="{% url 'stories:audio-status' story.pk %}" 
+                 hx-trigger="every 4s" 
+                 hx-target="#story-audio-player-container"
+                 hx-swap="outerHTML"
+                 style="display: flex; align-items: center; gap: 1rem; color: hsl(var(--text-muted));">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #38bdf8;"></i>
+                <div>
+                    <span style="font-weight: 600; color: hsl(var(--text-primary)); display: block; margin-bottom: 0.2rem;">El audio se está generando</span>
+                </div>
             </div>
+            {% if user.is_authenticated and user.is_staff %}
+                <button hx-post="{% url 'stories:audio-regenerate' story.pk %}" 
+                        hx-target="#story-audio-player-container" 
+                        hx-confirm="¿Forzar la regeneración del audio?"
+                        hx-swap="outerHTML" 
+                        class="btn btn-secondary btn-sm"
+                        style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: hsl(var(--text-primary)); z-index: 10; position: relative;">
+                    <i class="fa-solid fa-arrows-rotate"></i> Forzar regeneración
+                </button>
+            {% endif %}
         </div>
     {% elif story.audio_status == 'failed' %}
         <div style="display: flex; flex-direction: column; gap: 0.75rem;">

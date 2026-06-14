@@ -193,11 +193,11 @@ Genera ÚNICAMENTE un JSON válido con esta estructura (sin texto adicional):
 }}
 
 IMPORTANTE:
-- Los hashtags de Instagram deben ser 15-20 hashtags relevantes al contenido.
-- Los hashtags de Twitter deben ser 3-5 como máximo.
+- Los hashtags de Instagram deben ser muy específicos, populares y relevantes a la trama (15-20 hashtags). Mezcla nichos literarios con la temática exacta de la historia.
+- Los hashtags de Twitter deben ser impactantes y directos (3-5 como máximo).
 - Todos los textos deben ser en español.
-- No incluyas enlaces en el texto, se añadirán automáticamente.
-- Responde SOLO con el JSON."""
+- Incluye la palabra "[ENLACE]" de forma natural en el texto donde invitarías al usuario a leer la historia (por ejemplo: "Lee la historia completa aquí: [ENLACE]").
+- Responde SOLO con el JSON.
 
         try:
             response_text = self._generate(prompt, temperature=0.8, json_format=True)
