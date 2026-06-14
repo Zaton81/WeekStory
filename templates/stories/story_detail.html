@@ -64,7 +64,7 @@
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <!-- Twitter/X -->
                 <button class="share-btn share-btn-twitter" onclick="shareStory('twitter')" title="Compartir en Twitter/X">
-                    <i class="fa-brands fa-x-twitter"></i>
+                    <i class="fa-brands fa-twitter"></i>
                 </button>
                 <!-- Facebook -->
                 <button class="share-btn share-btn-facebook" onclick="shareStory('facebook')" title="Compartir en Facebook">
@@ -239,7 +239,7 @@
                                 {% for post in posts %}
                                     <button class="social-tab {% if forloop.first %}active{% endif %}" onclick="switchTab(event, '{{ post.platform }}')">
                                         {% if post.platform == 'twitter' %}
-                                            <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X
+                                            <i class="fa-brands fa-twitter platform-icon-twitter"></i> Twitter/X
                                         {% elif post.platform == 'linkedin' %}
                                             <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
                                         {% elif post.platform == 'instagram' %}
@@ -376,6 +376,13 @@
                                         var platform = dataEl.getAttribute('data-platform');
                                         var publishUrl = '';
                                         var storyUrl = window.location.href;
+
+                                        // Reemplazar [ENLACE] por la URL real o añadirlo al final si no está
+                                        if (fullText.includes('[ENLACE]')) {
+                                            fullText = fullText.replace(/\[ENLACE\]/g, storyUrl);
+                                        } else {
+                                            fullText = fullText + '\n\n' + storyUrl;
+                                        }
 
                                         if (platform === 'twitter') {
                                             publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
