@@ -16,9 +16,12 @@ sqlparse==0.4.4
 celery==5.3.6
 redis==5.0.1
 
-# AI/NLP - Ollama via HTTP API (no heavy local models needed)
-# Models run in the separate ollama container
+# AI/NLP & Audio - Local Models
 requests>=2.31.0
+kokoro-onnx==0.5.0
+soundfile==0.14.0
+onnxruntime==1.26.0
+numpy==2.4.6
 
 # Social Media APIs
 tweepy==4.14.0
