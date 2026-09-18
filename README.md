@@ -1,245 +1,139 @@
-"""
-README - WeekStory Project Setup & Running
-"""
-# WeekStory - AI-Powered Weekly Story Blog
+# WeekStory - Plataforma de Historias con IA Local
 
-A modern Django-based blog platform where users upload weekly stories and local AI automatically extracts key text and generates social media posts.
+Un moderno sistema de blog basado en Django donde los usuarios publican historias semanales y una Inteligencia Artificial local ejecuta tareas automatizadas como generar publicaciones para redes sociales y crear narraciones de audio (TTS).
 
-## Features
+## Características
 
-- ✨ User story uploads with automatic AI processing
-- 🤖 Local AI text extraction (BERT, spaCy)
-- 📱 Automatic social media post generation (Twitter/X, LinkedIn, Instagram, Facebook)
-- ⚡ Async task processing with Celery + Redis
-- 🐘 PostgreSQL for persistent data storage
-- 🐳 Docker Compose for easy setup and deployment
-- 📚 DRF REST API
-- 🧪 Unit tests + integration tests
+- ✨ Publicación y gestión de historias a través de Django Admin y frontend web.
+- 🤖 Generación de borradores para redes sociales mediante IA local (**Ollama** / Llama 3.2).
+- 🎙️ Generación de narraciones automáticas en audio mediante Text-To-Speech local (**Kokoro-ONNX**).
+- ⚡ Interfaz de usuario dinámica y reactiva gracias a **HTMX**.
+- ⚙️ Procesamiento asíncrono robusto mediante **Celery + Redis**.
+- 🐘 Almacenamiento de datos persistente con **PostgreSQL**.
+- 🐳 Configuración sencilla con **Docker Compose** para desarrollo y producción.
 
-## Prerequisites
+---
 
-- Docker & Docker Compose
-- Python 3.11+
-- PostgreSQL 14+
-- Redis 7+
+## Requisitos Previos
 
-## Quick Start
+Para ejecutar este proyecto, necesitarás instalar en tu sistema:
+- Docker y Docker Compose
+- Al menos 8GB de RAM (Recomendado para correr la IA y el contenedor Ollama)
 
-### 1. Clone & Setup
+## Arranque Rápido (Local/Desarrollo)
+
+### 1. Clonar y Configurar
 
 ```bash
-# Clone the project
+# Clona el proyecto
 git clone <repo-url>
 cd WeekStory
 
-# Copy environment file
+# Copia el archivo de variables de entorno
 cp .env.example .env
-
-# Build Docker images
-docker-compose build
 ```
 
-### 2. Initialize Database
+### 2. Levantar los Servicios
+
+Utilizamos Docker Compose para levantar todos los contenedores necesarios (Django, Base de Datos, Redis, Celery, Ollama, Nginx).
 
 ```bash
-# Run migrations
-docker-compose run web python manage.py migrate
-
-# Create superuser
-docker-compose run web python manage.py createsuperuser
-
-# Create initial AI models
-docker-compose run web python manage.py shell < scripts/init_models.py
+# Construir las imágenes e iniciar en segundo plano
+docker compose up --build -d
 ```
 
-### 3. Start Services
+### 3. Preparar la Base de Datos y Modelos IA
 
 ```bash
-# Start all services (Django, PostgreSQL, Redis, Celery, Celery Beat, Nginx)
-docker-compose up -d
+# Ejecutar migraciones de la base de datos
+docker compose exec web python manage.py migrate
 
-# View logs
-docker-compose logs -f web
+# Crear un usuario administrador (requerido para publicar y ver la IA)
+docker compose exec web python manage.py createsuperuser
 
-# Check health
-curl http://localhost:8000/health/
+# Recolectar archivos estáticos
+docker compose exec web python manage.py collectstatic --noinput
 ```
 
-## Project Structure
-
+Una vez levantados, la primera vez que la IA intente generar texto, Ollama descargará el modelo de manera automática, o puedes adelantarlo ejecutando:
+```bash
+docker compose exec ollama ollama run llama3.2:3b
 ```
+
+### 4. Acceso a la Plataforma
+
+- **Frontend de Usuario:** `http://localhost:8000/`
+- **Panel de Administración:** `http://localhost:8000/admin/`
+
+---
+
+## Estructura del Proyecto
+
+```text
 WeekStory/
-├── weekstory/              # Project config
-│   ├── settings.py        # Django settings
-│   ├── urls.py            # URL routing
-│   ├── celery.py          # Celery config
-│   └── wsgi.py
-├── apps/                  # Django apps
-│   ├── stories/           # User stories
-│   ├── extractions/       # AI text extraction
-│   ├── social_posts/      # Social media integration
-│   └── ai_models/         # Model management
-├── docker-compose.yml     # Services orchestration
-├── Dockerfile            # Django app image
-├── requirements.txt      # Python dependencies
-└── manage.py            # Django CLI
+├── weekstory/              # Configuración base de Django y Celery
+├── apps/                   # Módulos de la aplicación
+│   ├── stories/            # Lógica principal: modelos, vistas HTMX, tareas de audio (Kokoro TTS)
+│   ├── extractions/        # Interacción con Ollama para el análisis de texto
+│   ├── social_posts/       # Generación de posts para redes y su interfaz
+│   ├── legal/              # Páginas legales y políticas
+│   └── ai_models/          # Monitorización de tareas de la IA
+├── docker-compose.yml      # Definición de contenedores Docker
+├── Dockerfile              # Imagen del contenedor Django principal
+├── requirements.txt        # Dependencias de Python
+└── templates/              # Plantillas HTML/Django + HTMX
 ```
 
-## API Endpoints
+---
 
-### Stories
+## Flujo de Trabajo y Automatizaciones (IA)
 
+1. **Subida de una Historia:**
+   Cuando un administrador crea o edita una historia desde el panel de control o la web, se guardará en la base de datos y su estado de audio/extracción pasará a "Procesando".
+
+2. **Ejecución en Segundo Plano (Celery):**
+   Automáticamente se desencadenan las siguientes tareas asíncronas para no bloquear la interfaz web:
+   - Extracción de entidades y resumen con **Ollama**.
+   - Generación de borradores hiper-específicos para Redes Sociales (Twitter, Instagram, LinkedIn, Facebook).
+   - Generación del audio de la historia con el modelo TTS **Kokoro**.
+
+3. **Interactividad (HTMX):**
+   El usuario verá en la pantalla indicadores de "Cargando" que realizarán sondeos automáticos al servidor (polling cada 3-4 segundos) y se actualizarán de forma transparente cuando el audio y los textos estén listos.
+
+---
+
+## Solución de Problemas (Troubleshooting)
+
+### Los audios o los textos no se generan
+Esto suele indicar que los procesos de fondo (*Workers*) están caídos o no tienen conexión a Redis.
 ```bash
-# List user's stories
-GET /api/v1/stories/
-Authorization: Bearer <token>
+# Ver los logs de Celery
+docker compose logs -f celery_worker
 
-# Create new story
-POST /api/v1/stories/
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "My Weekly Story",
-  "content": "Once upon a time...",
-  "excerpt": "A short excerpt"
-}
-
-# Get story details
-GET /api/v1/stories/{id}/
-
-# Check extraction status
-GET /api/v1/stories/{id}/extraction-status/
+# Reiniciar el trabajador
+docker compose restart celery_worker
 ```
 
-## Environment Variables
-
-See `.env.example` for all configuration options:
-
+### Base de Datos
 ```bash
-# Core
-DEBUG=False
-SECRET_KEY=your-secret-key
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database
-DATABASE_URL=postgresql://user:pass@localhost/weekstory
-
-# AI Models
-TRANSFORMERS_CACHE=/app/models/transformers
-MODEL_NER=dslim/bert-base-multilingual-cased-ner
-CONFIDENCE_THRESHOLD=0.75
-
-# Social Media (Optional)
-TWITTER_BEARER_TOKEN=your-token
-LINKEDIN_CLIENT_ID=your-id
-# ... more in .env.example
+# Borrar toda la base de datos (¡PELIGRO! Se pierden todos los datos locales)
+docker compose down -v
+docker compose up -d
+docker compose exec web python manage.py migrate
 ```
 
-## Development Workflow
+---
 
-### 1. Create a Story (Trigger AI)
+## Despliegue en Producción
 
-```bash
-curl -X POST http://localhost:8000/api/v1/stories/ \
-  -H "Authorization: Token your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My Adventure",
-    "content": "A long story about an amazing journey..."
-  }'
+Antes de llevar este proyecto a producción en un servidor remoto, sigue estos pasos de seguridad y rendimiento:
 
-# Returns: {"id": 1, "status": "processing"}
-```
+1. Modifica `.env` y configura variables seguras:
+   - `DEBUG=False`
+   - Configura contraseñas complejas para `POSTGRES_PASSWORD` y `CELERY_BROKER_URL`.
+   - Modifica `ALLOWED_HOSTS` y `CSRF_TRUSTED_ORIGINS` para incluir tu dominio real (ej: `https://weekstory.com`).
+2. **Servidor Web y SSL:** Configura un servidor *proxy* inverso (Nginx, Traefik o Caddy) en la máquina host que gestione certificados SSL (HTTPS).
+3. **Optimización de IA:** Asegúrate de que el VPS o Servidor Dedicado tenga suficientes recursos (RAM y preferiblemente CPU potente o GPU) si los contenedores locales de IA recibirán alta carga.
 
-### 2. Check Extraction Status
-
-```bash
-curl http://localhost:8000/api/v1/stories/1/extraction-status/ \
-  -H "Authorization: Token your-token"
-
-# Returns: {"extraction_status": "completed", "extraction_complete": true}
-```
-
-### 3. Monitor Celery Tasks
-
-```bash
-# View active tasks
-docker-compose exec celery_worker celery -A weekstory inspect active
-
-# View scheduled tasks
-docker-compose exec celery_beat celery -A weekstory inspect scheduled
-```
-
-## Testing
-
-```bash
-# Run all tests
-docker-compose run web pytest
-
-# Run with coverage
-docker-compose run web pytest --cov=apps --cov-report=html
-
-# Run specific app tests
-docker-compose run web pytest apps/stories/tests.py
-```
-
-## Troubleshooting
-
-### Models not loading
-
-```bash
-# Check TRANSFORMERS_CACHE is accessible
-docker-compose exec web ls -la /app/models/
-
-# Pre-download models manually
-docker-compose run web python -c "from transformers import pipeline; pipeline('ner', model='dslim/bert-base-multilingual-cased-ner')"
-```
-
-### Celery tasks not running
-
-```bash
-# Check Redis connection
-docker-compose exec redis redis-cli ping
-
-# View Celery logs
-docker-compose logs -f celery_worker
-
-# Restart Celery worker
-docker-compose restart celery_worker
-```
-
-### Database issues
-
-```bash
-# Check PostgreSQL connection
-docker-compose exec db psql -U weekstory_user -d weekstory -c "SELECT 1"
-
-# Reset database (WARNING: Deletes all data!)
-docker-compose down -v
-docker-compose up -d db
-docker-compose run web python manage.py migrate
-```
-
-## Production Deployment
-
-1. Update `.env` with production values (SECRET_KEY, ALLOWED_HOSTS, etc.)
-2. Set `DEBUG=False`
-3. Configure HTTPS (nginx + SSL certificate)
-4. Use external PostgreSQL & Redis
-5. Configure email backend for notifications
-6. Set up monitoring (Sentry, Prometheus)
-7. Run migrations: `docker-compose exec web python manage.py migrate`
-8. Collect static: `docker-compose exec web python manage.py collectstatic`
-9. Create backup strategy
-
-## Contributing
-
-1. Create a feature branch
-2. Follow PEP 8 + Django conventions
-3. Write tests for new features
-4. Submit PR with description
-
-## License
-
+## Licencia
 MIT

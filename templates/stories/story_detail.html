@@ -4,39 +4,43 @@
 
 {% block content %}
 <div style="margin-bottom: 2rem;">
-    <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Volver a Historias</a>
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 0.5rem; flex-wrap: wrap; gap: 1rem;">
+    <a href="{% url 'stories:story-list' %}" class="story-meta"><i class="fa-solid fa-arrow-left"></i> Volver a
+        Historias</a>
+    <div
+        style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 0.5rem; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1 class="gradient-text" style="font-size: 2.2rem; line-height: 1.2;">{{ story.title }}</h1>
             <div class="story-meta" style="margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem 0.8rem;">
                 <span><i class="fa-regular fa-calendar-days"></i> Creado el {{ story.created_at|date:"d F, Y" }}</span>
                 <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} palabras</span>
                 {% if story.category %}
-                    <span class="badge badge-category"><i class="fa-solid fa-folder"></i> {{ story.category.name }}</span>
+                <span class="badge badge-category"><i class="fa-solid fa-folder"></i> {{ story.category.name }}</span>
                 {% endif %}
                 {% if user.is_authenticated and user.is_staff %}
-                    {% if story.status == 'draft' %}
-                        <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador</span>
-                    {% elif story.status == 'published' %}
-                        <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
-                    {% elif story.status == 'scheduled' %}
-                        <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado {{ story.scheduled_at|date:"d/m/Y H:i" }}</span>
-                    {% else %}
-                        <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
-                    {% endif %}
+                {% if story.status == 'draft' %}
+                <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador</span>
+                {% elif story.status == 'published' %}
+                <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                {% elif story.status == 'scheduled' %}
+                <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado {{
+                    story.scheduled_at|date:"d/m/Y H:i" }}</span>
+                {% else %}
+                <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
-        
+
         {% if user.is_authenticated and user.is_staff %}
-            <div style="display: flex; gap: 0.5rem;">
-                <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary">
-                    <i class="fa-solid fa-pen-to-square"></i> Editar
-                </a>
-                <a href="{% url 'stories:story-delete' story.id %}" class="btn btn-danger" style="background: rgba(239,68,68,0.06);">
-                    <i class="fa-regular fa-trash-can"></i> Eliminar
-                </a>
-            </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary">
+                <i class="fa-solid fa-pen-to-square"></i> Editar
+            </a>
+            <a href="{% url 'stories:story-delete' story.id %}" class="btn btn-danger"
+                style="background: rgba(239,68,68,0.06);">
+                <i class="fa-regular fa-trash-can"></i> Eliminar
+            </a>
+        </div>
         {% endif %}
     </div>
 </div>
@@ -44,42 +48,49 @@
 <div class="{% if user.is_authenticated and user.is_staff %}detail-layout{% endif %}">
     <!-- Columna Izquierda: Contenido de la historia, Historias relacionadas, Comentarios y (para admins) Publicaciones en redes sociales -->
     <div style="display: flex; flex-direction: column; gap: 2rem;">
-        
+
         <!-- Imagen de portada -->
         {% if story.cover_image %}
-            <div class="story-cover-full">
-                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
-            </div>
+        <div class="story-cover-full">
+            <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+        </div>
         {% endif %}
-        
+
         <!-- Reproductor de Audio (IA Local) -->
         {% include 'stories/story_audio_partial.html' %}
 
         <!-- Botones de Compartir (Visible para todos los usuarios) -->
         {% if story.status == 'published' %}
-        <div class="share-buttons-bar glass-card" style="padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-            <span style="font-size: 0.9rem; font-weight: 600; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 0.5rem;">
+        <div class="share-buttons-bar glass-card"
+            style="padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <span
+                style="font-size: 0.9rem; font-weight: 600; color: hsl(var(--text-muted)); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-share-nodes"></i> Compartir
             </span>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <!-- Twitter/X -->
-                <button class="share-btn share-btn-twitter" onclick="shareStory('twitter')" title="Compartir en Twitter/X">
+                <button class="share-btn share-btn-twitter" onclick="shareStory('twitter')"
+                    title="Compartir en Twitter/X">
                     <i class="fa-brands fa-twitter"></i>
                 </button>
                 <!-- Facebook -->
-                <button class="share-btn share-btn-facebook" onclick="shareStory('facebook')" title="Compartir en Facebook">
+                <button class="share-btn share-btn-facebook" onclick="shareStory('facebook')"
+                    title="Compartir en Facebook">
                     <i class="fa-brands fa-facebook-f"></i>
                 </button>
                 <!-- LinkedIn -->
-                <button class="share-btn share-btn-linkedin" onclick="shareStory('linkedin')" title="Compartir en LinkedIn">
+                <button class="share-btn share-btn-linkedin" onclick="shareStory('linkedin')"
+                    title="Compartir en LinkedIn">
                     <i class="fa-brands fa-linkedin-in"></i>
                 </button>
                 <!-- WhatsApp -->
-                <button class="share-btn share-btn-whatsapp" onclick="shareStory('whatsapp')" title="Compartir en WhatsApp">
+                <button class="share-btn share-btn-whatsapp" onclick="shareStory('whatsapp')"
+                    title="Compartir en WhatsApp">
                     <i class="fa-brands fa-whatsapp"></i>
                 </button>
                 <!-- Telegram -->
-                <button class="share-btn share-btn-telegram" onclick="shareStory('telegram')" title="Compartir en Telegram">
+                <button class="share-btn share-btn-telegram" onclick="shareStory('telegram')"
+                    title="Compartir en Telegram">
                     <i class="fa-brands fa-telegram"></i>
                 </button>
                 <!-- Copiar enlace -->
@@ -117,13 +128,13 @@
                 }
             }
             function copyStoryLink(btn) {
-                navigator.clipboard.writeText(window.location.href).then(function() {
+                navigator.clipboard.writeText(window.location.href).then(function () {
                     var icon = btn.querySelector('i');
                     icon.className = 'fa-solid fa-check';
                     btn.style.background = 'rgba(74, 222, 128, 0.2)';
                     btn.style.color = '#4ade80';
                     btn.style.borderColor = 'rgba(74, 222, 128, 0.3)';
-                    setTimeout(function() {
+                    setTimeout(function () {
                         icon.className = 'fa-solid fa-link';
                         btn.style.background = '';
                         btn.style.color = '';
@@ -137,11 +148,12 @@
         <!-- Tarjeta de Contenido de la Historia -->
         <div class="glass-card story-content-panel">
             {% if story.excerpt %}
-                <div style="background: rgba(255,255,255,0.03); border-left: 3px solid hsl(var(--secondary)); padding: 1rem; border-radius: 4px; font-style: italic; margin-bottom: 1.5rem; color: hsl(var(--text-muted));">
-                    <strong>Resumen:</strong> {{ story.excerpt }}
-                </div>
+            <div
+                style="background: rgba(255,255,255,0.03); border-left: 3px solid hsl(var(--secondary)); padding: 1rem; border-radius: 4px; font-style: italic; margin-bottom: 1.5rem; color: hsl(var(--text-muted));">
+                <strong>Resumen:</strong> {{ story.excerpt }}
+            </div>
             {% endif %}
-            
+
             <div class="story-body-text ck-content">
                 {{ story.content|safe }}
             </div>
@@ -149,55 +161,57 @@
 
         <!-- Historias Relacionadas -->
         {% if related_stories %}
-            <div class="glass-card">
-                <h3 class="gradient-text" style="font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fa-solid fa-book-open"></i> Historias Relacionadas
-                </h3>
-                <div class="related-stories-grid">
-                    {% for related in related_stories %}
-                        <a href="{% url 'stories:story-detail' related.id %}" class="related-story-card glass-card">
-                            {% if related.cover_image %}
-                                <div class="related-story-thumb">
-                                    <img src="{{ related.cover_image.url }}" alt="{{ related.title }}">
-                                </div>
-                            {% else %}
-                                <div class="related-story-thumb related-story-placeholder">
-                                    <i class="fa-solid fa-feather-pointed"></i>
-                                </div>
-                            {% endif %}
-                            <div class="related-story-info">
-                                <h4>{{ related.title }}</h4>
-                                <span class="story-meta">
-                                    <i class="fa-regular fa-calendar-days"></i> {{ related.created_at|date:"d M, Y" }}
-                                    {% if related.category %} · {{ related.category.name }}{% endif %}
-                                </span>
-                            </div>
-                        </a>
-                    {% endfor %}
-                </div>
+        <div class="glass-card">
+            <h3 class="gradient-text"
+                style="font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-book-open"></i> Historias Relacionadas
+            </h3>
+            <div class="related-stories-grid">
+                {% for related in related_stories %}
+                <a href="{% url 'stories:story-detail' related.id %}" class="related-story-card glass-card">
+                    {% if related.cover_image %}
+                    <div class="related-story-thumb">
+                        <img src="{{ related.cover_image.url }}" alt="{{ related.title }}">
+                    </div>
+                    {% else %}
+                    <div class="related-story-thumb related-story-placeholder">
+                        <i class="fa-solid fa-feather-pointed"></i>
+                    </div>
+                    {% endif %}
+                    <div class="related-story-info">
+                        <h4>{{ related.title }}</h4>
+                        <span class="story-meta">
+                            <i class="fa-regular fa-calendar-days"></i> {{ related.created_at|date:"d M, Y" }}
+                            {% if related.category %} · {{ related.category.name }}{% endif %}
+                        </span>
+                    </div>
+                </a>
+                {% endfor %}
             </div>
+        </div>
         {% endif %}
 
         <!-- Sección de Comentarios -->
         <div class="glass-card">
-            <h3 class="gradient-text" style="font-size: 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <h3 class="gradient-text"
+                style="font-size: 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-comments"></i> Comentarios
             </h3>
-            
+
             <!-- Formulario de Comentarios -->
-            <form hx-post="{% url 'stories:add-comment' story.id %}" 
-                  hx-target="#comments-list" 
-                  hx-swap="beforeend" 
-                  hx-on::after-request="if(event.detail.successful) this.reset();" 
-                  style="margin-bottom: 2rem; margin-top: 1rem;">
+            <form hx-post="{% url 'stories:add-comment' story.id %}" hx-target="#comments-list" hx-swap="beforeend"
+                hx-on::after-request="if(event.detail.successful) this.reset();"
+                style="margin-bottom: 2rem; margin-top: 1rem;">
                 {% csrf_token %}
                 <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" for="id_author_name">Tu Nombre <span style="color: hsl(var(--danger));">*</span></label>
+                        <label class="form-label" for="id_author_name">Tu Nombre <span
+                                style="color: hsl(var(--danger));">*</span></label>
                         {{ comment_form.author_name }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" for="id_content">Comentario <span style="color: hsl(var(--danger));">*</span></label>
+                        <label class="form-label" for="id_content">Comentario <span
+                                style="color: hsl(var(--danger));">*</span></label>
                         {{ comment_form.content }}
                     </div>
                 </div>
@@ -212,308 +226,311 @@
             </form>
 
             <!-- Lista de Comentarios -->
-            <div id="comments-list" style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+            <div id="comments-list"
+                style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
                 {% if comments %}
-                    {% for comment in comments %}
-                        {% include 'stories/comment_partial.html' with comment=comment %}
-                    {% endfor %}
+                {% for comment in comments %}
+                {% include 'stories/comment_partial.html' with comment=comment %}
+                {% endfor %}
                 {% else %}
-                    <div id="no-comments-placeholder" class="empty-state-text" style="text-align: center; padding: 2rem 0;">
-                        No hay comentarios aún. ¡Sé el primero en compartir tu opinión!
-                    </div>
+                <div id="no-comments-placeholder" class="empty-state-text" style="text-align: center; padding: 2rem 0;">
+                    No hay comentarios aún. ¡Sé el primero en compartir tu opinión!
+                </div>
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- Tarjeta de Publicaciones en Redes Sociales (Solo Administradores) -->
         {% if user.is_authenticated and user.is_staff %}
-            <div class="glass-card social-dashboard">
-                <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Publicaciones en Redes Generadas</h2>
-                <p class="story-meta" style="margin-bottom: 1.5rem;">Borradores generados por IA local (Ollama) optimizados para distribución multiplataforma.</p>
-                
-                {% if story.extraction %}
-                    {% with posts=story.extraction.social_posts.all %}
-                        {% if posts %}
-                            <!-- Pestañas -->
-                            <div class="social-tabs">
-                                {% for post in posts %}
-                                    <button class="social-tab {% if forloop.first %}active{% endif %}" onclick="switchTab(event, '{{ post.platform }}')">
-                                        {% if post.platform == 'twitter' %}
-                                            <i class="fa-brands fa-twitter platform-icon-twitter"></i> Twitter/X
-                                        {% elif post.platform == 'linkedin' %}
-                                            <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
-                                        {% elif post.platform == 'instagram' %}
-                                            <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
-                                        {% elif post.platform == 'facebook' %}
-                                            <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
-                                        {% else %}
-                                            {{ post.get_platform_display }}
-                                        {% endif %}
-                                    </button>
-                                {% endfor %}
-                            </div>
-                            
-                            <!-- Contenidos de pestaña -->
-                            {% for post in posts %}
-                                <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}"
-                                     {% if post.status == 'scheduled' %}
-                                     hx-get="{% url 'stories:social-status' post.id %}"
-                                     hx-trigger="every 3s"
-                                     hx-swap="outerHTML"
-                                     {% endif %}>
-                                    <div class="post-preview-card">
-                                        <div class="platform-brand-header">
-                                            <div class="platform-name">
-                                                {% if post.platform == 'twitter' %}
-                                                    <i class="fa-brands fa-x-twitter platform-icon-twitter"></i> Twitter/X
-                                                {% elif post.platform == 'linkedin' %}
-                                                    <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
-                                                {% elif post.platform == 'instagram' %}
-                                                    <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
-                                                {% elif post.platform == 'facebook' %}
-                                                    <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
-                                                {% endif %}
-                                            </div>
-                                            {% if post.status == 'published' %}
-                                                <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
-                                            {% elif post.status == 'scheduled' %}
-                                                <span class="badge badge-scheduled"><i class="fa-solid fa-spinner fa-spin"></i> Publicando...</span>
-                                            {% elif post.status == 'accepted' %}
-                                                <span class="badge badge-published" style="background: rgba(16,185,129,0.15); color: #10b981;"><i class="fa-solid fa-square-check"></i> Aprobado (Listo)</span>
-                                            {% elif post.status == 'failed' %}
-                                                <span class="badge badge-draft" style="background: rgba(239,68,68,0.15); color: hsl(var(--danger));"><i class="fa-solid fa-triangle-exclamation"></i> Error</span>
-                                            {% else %}
-                                                <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador IA</span>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">{{ post.user_edited_text|default:post.generated_text }}</div>
-                                        
-                                        {% if post.hashtags %}
-                                            <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
-                                                {% for tag in post.hashtags.split %}
-                                                    {% if tag|first == '#' %}
-                                                        <span class="pill pill-character" style="font-size: 0.75rem;">{{ tag }}</span>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
+        <div class="glass-card social-dashboard">
+            <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Publicaciones en Redes Generadas</h2>
+            <p class="story-meta" style="margin-bottom: 1.5rem;">Borradores generados por IA local (Ollama) optimizados
+                para distribución multiplataforma.</p>
 
-                                        {% if post.status == 'failed' and post.error_message %}
-                                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.85rem; color: hsl(var(--danger));">
-                                                <i class="fa-solid fa-circle-exclamation"></i> {{ post.error_message }}
-                                            </div>
-                                        {% endif %}
-
-                                        {% if post.published_url %}
-                                            <div style="margin-top: 0.75rem; font-size: 0.8rem;">
-                                                <a href="{{ post.published_url }}" target="_blank" style="color: hsl(var(--secondary));">
-                                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver publicación
-                                                </a>
-                                            </div>
-                                        {% endif %}
-                                        
-                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
-                                            {% if post.status == 'draft' or post.status == 'failed' %}
-                                                <button class="btn btn-secondary btn-sm"
-                                                        hx-get="{% url 'stories:social-edit' post.id %}"
-                                                        hx-target="#post-{{ post.platform }}"
-                                                        hx-swap="outerHTML">
-                                                    <i class="fa-solid fa-pen"></i> Editar
-                                                </button>
-                                                <button class="btn btn-secondary btn-sm"
-                                                        hx-post="{% url 'stories:social-regenerate' post.id %}"
-                                                        hx-target="#post-{{ post.platform }}"
-                                                        hx-swap="outerHTML"
-                                                        hx-confirm="¿Regenerar el borrador con IA? Se perderán las ediciones manuales.">
-                                                    <i class="fa-solid fa-arrows-rotate"></i> Regenerar
-                                                </button>
-                                                <button class="btn btn-primary btn-sm"
-                                                        hx-post="{% url 'stories:social-approve' post.id %}"
-                                                        hx-target="#post-{{ post.platform }}"
-                                                        hx-swap="outerHTML">
-                                                    <i class="fa-solid fa-check"></i> Aprobar Borrador
-                                                </button>
-                                            {% elif post.status == 'accepted' %}
-                                                <button class="btn btn-secondary btn-sm"
-                                                        hx-get="{% url 'stories:social-edit' post.id %}"
-                                                        hx-target="#post-{{ post.platform }}"
-                                                        hx-swap="outerHTML">
-                                                    <i class="fa-solid fa-pen"></i> Editar
-                                                </button>
-                                                <button class="btn btn-secondary btn-sm"
-                                                        hx-post="{% url 'stories:social-reject' post.id %}"
-                                                        hx-target="#post-{{ post.platform }}"
-                                                        hx-swap="outerHTML">
-                                                    <i class="fa-solid fa-xmark"></i> Volver a Borrador
-                                                </button>
-                                                <button class="btn btn-primary btn-sm"
-                                                        onclick="openSocialPublishWindow_{{ post.id }}()"
-                                                        id="publish-btn-init-{{ post.id }}">
-                                                    <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-
-                            {# JavaScript para los botones de publicar en ventana nativa #}
-                            {% for post in posts %}
-                                {% if post.status == 'accepted' %}
-                                <div id="social-data-{{ post.id }}" 
-                                     data-text="{{ post.user_edited_text|default:post.generated_text }}"
-                                     data-hashtags="{{ post.hashtags }}"
-                                     data-platform="{{ post.platform }}"
-                                     style="display:none;"></div>
-                                <script>
-                                (function() {
-                                    window['openSocialPublishWindow_{{ post.id }}'] = function() {
-                                        var dataEl = document.getElementById('social-data-{{ post.id }}');
-                                        var postText = dataEl.getAttribute('data-text');
-                                        var hashtags = dataEl.getAttribute('data-hashtags');
-                                        var fullText = hashtags ? postText + '\n\n' + hashtags : postText;
-                                        var platform = dataEl.getAttribute('data-platform');
-                                        var publishUrl = '';
-                                        var storyUrl = window.location.href;
-
-                                        // Reemplazar [ENLACE] por la URL real o añadirlo al final si no está
-                                        if (fullText.includes('[ENLACE]')) {
-                                            fullText = fullText.replace(/\[ENLACE\]/g, storyUrl);
-                                        } else {
-                                            fullText = fullText + '\n\n' + storyUrl;
-                                        }
-
-                                        if (platform === 'twitter') {
-                                            publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
-                                        } else if (platform === 'facebook') {
-                                            publishUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encodeURIComponent(fullText) + '&u=' + encodeURIComponent(storyUrl);
-                                        } else if (platform === 'linkedin') {
-                                            publishUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(storyUrl);
-                                        } else if (platform === 'instagram') {
-                                            navigator.clipboard.writeText(fullText).then(function() {
-                                                alert('📋 Texto copiado al portapapeles.\n\nAbre Instagram y pega el texto en tu nueva publicación.');
-                                                window.open('https://www.instagram.com/', '_blank');
-                                            }).catch(function() {
-                                                prompt('Copia el siguiente texto y publícalo en Instagram:', fullText);
-                                                window.open('https://www.instagram.com/', '_blank');
-                                            });
-                                        }
-                                        if (publishUrl) {
-                                            window.open(publishUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
-                                        }
-                                        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-                                        htmx.ajax('POST', '{% url "stories:social-publish" post.id %}', {
-                                            target: '#post-{{ post.platform }}',
-                                            swap: 'outerHTML',
-                                            headers: { 'X-CSRFToken': csrfToken ? csrfToken.value : '{{ csrf_token }}' }
-                                        });
-                                    };
-                                })();
-                                </script>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state" style="padding: 2rem 1rem;">
-                                <p class="story-meta">No se han generado publicaciones sociales. Vuelve a comprobar en unos segundos.</p>
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                {% else %}
-                    <div class="empty-state" style="padding: 2rem 1rem;">
-                        <i class="fa-solid fa-circle-notch fa-spin empty-state-icon" style="font-size: 2rem;"></i>
-                        <p class="story-meta" style="margin-top: 1rem;">La generación de publicaciones sociales por IA está esperando a que termine la extracción de texto.</p>
-                    </div>
-                {% endif %}
+            {% if story.extraction %}
+            {% with posts=story.extraction.social_posts.all %}
+            {% if posts %}
+            <!-- Pestañas -->
+            <div class="social-tabs">
+                {% for post in posts %}
+                <button class="social-tab {% if forloop.first %}active{% endif %}"
+                    onclick="switchTab(event, '{{ post.platform }}')">
+                    {% if post.platform == 'twitter' %}
+                    <i class="fa-brands fa-twitter platform-icon-twitter"></i> Twitter/X
+                    {% elif post.platform == 'linkedin' %}
+                    <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
+                    {% elif post.platform == 'instagram' %}
+                    <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
+                    {% elif post.platform == 'facebook' %}
+                    <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
+                    {% else %}
+                    {{ post.get_platform_display }}
+                    {% endif %}
+                </button>
+                {% endfor %}
             </div>
+
+            <!-- Contenidos de pestaña -->
+            {% for post in posts %}
+            <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}" 
+                 {% if post.status == 'scheduled' %} 
+                 hx-get="{% url 'stories:social-status' post.id %}" hx-trigger="every 3s" hx-swap="outerHTML" 
+                 {% endif %}>
+                <div class="post-preview-card">
+                    <div class="platform-brand-header">
+                        <div class="platform-name">
+                            {% if post.platform == 'twitter' %}
+                            <i class="fa-brands fa-twitter platform-icon-twitter"></i> Twitter/X
+                            {% elif post.platform == 'linkedin' %}
+                            <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
+                            {% elif post.platform == 'instagram' %}
+                            <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
+                            {% elif post.platform == 'facebook' %}
+                            <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
+                            {% endif %}
+                        </div>
+                        {% if post.status == 'published' %}
+                        <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
+                        {% elif post.status == 'scheduled' %}
+                        <span class="badge badge-scheduled"><i class="fa-solid fa-spinner fa-spin"></i>
+                            Publicando...</span>
+                        {% elif post.status == 'accepted' %}
+                        <span class="badge badge-published"
+                            style="background: rgba(16,185,129,0.15); color: #10b981;"><i
+                                class="fa-solid fa-square-check"></i> Aprobado (Listo)</span>
+                        {% elif post.status == 'failed' %}
+                        <span class="badge badge-draft"
+                            style="background: rgba(239,68,68,0.15); color: hsl(var(--danger));"><i
+                                class="fa-solid fa-triangle-exclamation"></i> Error</span>
+                        {% else %}
+                        <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador IA</span>
+                        {% endif %}
+                    </div>
+
+                    <div
+                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">
+                        {{ post.user_edited_text|default:post.generated_text }}</div>
+
+                    {% if post.hashtags %}
+                    <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+                        {% for tag in post.hashtags.split %}
+                        {% if tag|first == '#' %}
+                        <span class="pill pill-character" style="font-size: 0.75rem;">{{ tag }}</span>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if post.status == 'failed' and post.error_message %}
+                    <div
+                        style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.85rem; color: hsl(var(--danger));">
+                        <i class="fa-solid fa-circle-exclamation"></i> {{ post.error_message }}
+                    </div>
+                    {% endif %}
+
+                    {% if post.published_url %}
+                    <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+                        <a href="{{ post.published_url }}" target="_blank" style="color: hsl(var(--secondary));">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver publicación
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
+                        {% if post.status == 'draft' or post.status == 'failed' %}
+                        <button class="btn btn-secondary btn-sm" hx-get="{% url 'stories:social-edit' post.id %}"
+                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </button>
+                        <button class="btn btn-secondary btn-sm" hx-post="{% url 'stories:social-regenerate' post.id %}"
+                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML"
+                            hx-confirm="¿Regenerar el borrador con IA? Se perderán las ediciones manuales.">
+                            <i class="fa-solid fa-arrows-rotate"></i> Regenerar
+                        </button>
+                        <button class="btn btn-primary btn-sm" hx-post="{% url 'stories:social-approve' post.id %}"
+                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
+                            <i class="fa-solid fa-check"></i> Aprobar Borrador
+                        </button>
+                        {% elif post.status == 'accepted' %}
+                        <button class="btn btn-secondary btn-sm" hx-get="{% url 'stories:social-edit' post.id %}"
+                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </button>
+                        <button class="btn btn-secondary btn-sm" hx-post="{% url 'stories:social-reject' post.id %}"
+                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
+                            <i class="fa-solid fa-xmark"></i> Volver a Borrador
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="openSocialPublishWindow_{{ post.id }}()"
+                            id="publish-btn-init-{{ post.id }}">
+                            <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {# JavaScript para los botones de publicar en ventana nativa #}
+            {% for post in posts %}
+            {% if post.status == 'accepted' %}
+            <div id="social-data-{{ post.id }}" data-text="{{ post.user_edited_text|default:post.generated_text }}"
+                data-hashtags="{{ post.hashtags }}" data-platform="{{ post.platform }}" style="display:none;"></div>
+            <script>
+                (function () {
+                    window['openSocialPublishWindow_{{ post.id }}'] = function () {
+                        var dataEl = document.getElementById('social-data-{{ post.id }}');
+                        var postText = dataEl.getAttribute('data-text');
+                        var hashtags = dataEl.getAttribute('data-hashtags');
+                        var fullText = hashtags ? postText + '\n\n' + hashtags : postText;
+                        var platform = dataEl.getAttribute('data-platform');
+                        var publishUrl = '';
+                        var storyUrl = window.location.href;
+
+                        // Reemplazar [ENLACE] por la URL real o añadirlo al final si no está
+                        if (fullText.includes('[ENLACE]')) {
+                            fullText = fullText.replace(/\[ENLACE\]/g, storyUrl);
+                        } else {
+                            fullText = fullText + '\n\n' + storyUrl;
+                        }
+
+                        if (platform === 'twitter') {
+                            publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
+                        } else if (platform === 'facebook') {
+                            publishUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encodeURIComponent(fullText) + '&u=' + encodeURIComponent(storyUrl);
+                        } else if (platform === 'linkedin') {
+                            publishUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(storyUrl);
+                        } else if (platform === 'instagram') {
+                            navigator.clipboard.writeText(fullText).then(function () {
+                                alert('📋 Texto copiado al portapapeles.\n\nAbre Instagram y pega el texto en tu nueva publicación.');
+                                window.open('https://www.instagram.com/', '_blank');
+                            }).catch(function () {
+                                prompt('Copia el siguiente texto y publícalo en Instagram:', fullText);
+                                window.open('https://www.instagram.com/', '_blank');
+                            });
+                        }
+                        if (publishUrl) {
+                            window.open(publishUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+                        }
+                        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                        htmx.ajax('POST', '{% url "stories:social-publish" post.id %}', {
+                            target: '#post-{{ post.platform }}',
+                            swap: 'outerHTML',
+                            headers: { 'X-CSRFToken': csrfToken ? csrfToken.value : '{{ csrf_token }}' }
+                        });
+                    };
+                })();
+            </script>
+            {% endif %}
+            {% endfor %}
+            {% else %}
+            <div class="empty-state" style="padding: 2rem 1rem;">
+                <p class="story-meta">No se han generado publicaciones sociales. Vuelve a comprobar en unos segundos.
+                </p>
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% else %}
+            <div class="empty-state" style="padding: 2rem 1rem;">
+                <i class="fa-solid fa-circle-notch fa-spin empty-state-icon" style="font-size: 2rem;"></i>
+                <p class="story-meta" style="margin-top: 1rem;">La generación de publicaciones sociales por IA está
+                    esperando a que termine la extracción de texto.</p>
+            </div>
+            {% endif %}
+        </div>
         {% endif %}
-        
+
     </div>
 
     <!-- Columna Derecha: Extracción de IA y Detalles (Solo Administradores) -->
     {% if user.is_authenticated and user.is_staff %}
-        <div class="detail-sidebar">
-            
-            <!-- Tarjeta de Resumen de Extracción de IA -->
-            <div class="glass-card" style="padding: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;" class="gradient-text">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Análisis de IA
-                    </h3>
-                    {% include 'stories/story_extraction_partial.html' with story=story %}
-                </div>
-                
-                {% if story.extraction %}
-                    <div class="entities-group" style="margin-top: 0;">
-                        <div class="entities-title">Resumen Extraído</div>
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--text-muted)); max-height: 250px; overflow-y: auto;">
-                            {{ story.extraction.extracted_text }}
-                        </div>
-                    </div>
-                    
-                    <div class="entities-group">
-                        <div class="entities-title"><i class="fa-solid fa-users"></i> Personajes</div>
-                        <div class="tags-container">
-                            {% if story.extraction.entities.characters %}
-                                {% for char in story.extraction.entities.characters %}
-                                    <span class="pill pill-character"><i class="fa-regular fa-user"></i> {{ char }}</span>
-                                {% endfor %}
-                            {% else %}
-                                <span class="empty-state-text">No se identificaron personajes.</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="entities-group">
-                        <div class="entities-title"><i class="fa-solid fa-map-location-dot"></i> Ubicaciones</div>
-                        <div class="tags-container">
-                            {% if story.extraction.entities.locations %}
-                                {% for loc in story.extraction.entities.locations %}
-                                    <span class="pill pill-location"><i class="fa-solid fa-location-dot"></i> {{ loc }}</span>
-                                {% endfor %}
-                            {% else %}
-                                <span class="empty-state-text">No se identificaron ubicaciones.</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="entities-group" style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1.5rem;">
-                        <div class="entities-title">Confiabilidad de la Extracción</div>
-                        <div class="confidence-widget">
-                            <div class="confidence-bar-wrapper">
-                                <!-- Cálculo de porcentaje de confianza -->
-                                <div class="confidence-bar" style="width: {% widthratio story.extraction.confidence_score 1 100 %}%"></div>
-                            </div>
-                            <span class="confidence-val">{% widthratio story.extraction.confidence_score 1 100 %}%</span>
-                        </div>
-                        <div class="story-meta" style="font-size: 0.75rem; margin-top: 0.5rem; display: flex; justify-content: space-between;">
-                            <span>Modelo: {{ story.extraction.model_version }}</span>
-                            {% if story.extraction.processing_time_ms %}
-                                <span>Tardó {{ story.extraction.processing_time_ms }}ms</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% else %}
-                    {% if story.extraction_status == 'failed' %}
-                        <div class="empty-state" style="padding: 1.5rem 0;">
-                            <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; color: hsl(var(--danger)); margin-bottom: 0.75rem;"></i>
-                            <p class="story-meta" style="font-size: 0.85rem; color: hsl(var(--danger));">La extracción falló.</p>
-                            <p style="font-size: 0.8rem; color: hsl(var(--text-muted)); margin-top: 0.5rem;">{{ story.extraction_error }}</p>
-                        </div>
-                    {% else %}
-                        <!-- Contenedor de HTMX para refrescar estado en barra lateral -->
-                        <div class="empty-state" style="padding: 2.5rem 0;" 
-                             hx-get="{% url 'stories:extraction-status' story.id %}" 
-                             hx-trigger="every 3s" 
-                             hx-swap="outerHTML">
-                            <i class="fa-solid fa-gear fa-spin empty-state-icon" style="font-size: 2rem;"></i>
-                            <p class="story-meta">El modelo de IA está procesando. Los resultados se cargarán automáticamente...</p>
-                        </div>
-                    {% endif %}
-                {% endif %}
+    <div class="detail-sidebar">
+
+        <!-- Tarjeta de Resumen de Extracción de IA -->
+        <div class="glass-card" style="padding: 1.5rem;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;" class="gradient-text">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Análisis de IA
+                </h3>
+                {% include 'stories/story_extraction_partial.html' with story=story %}
             </div>
-            
+
+            {% if story.extraction %}
+            <div class="entities-group" style="margin-top: 0;">
+                <div class="entities-title">Resumen Extraído</div>
+                <div
+                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--text-muted)); max-height: 250px; overflow-y: auto;">
+                    {{ story.extraction.extracted_text }}
+                </div>
+            </div>
+
+            <div class="entities-group">
+                <div class="entities-title"><i class="fa-solid fa-users"></i> Personajes</div>
+                <div class="tags-container">
+                    {% if story.extraction.entities.characters %}
+                    {% for char in story.extraction.entities.characters %}
+                    <span class="pill pill-character"><i class="fa-regular fa-user"></i> {{ char }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <span class="empty-state-text">No se identificaron personajes.</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="entities-group">
+                <div class="entities-title"><i class="fa-solid fa-map-location-dot"></i> Ubicaciones</div>
+                <div class="tags-container">
+                    {% if story.extraction.entities.locations %}
+                    {% for loc in story.extraction.entities.locations %}
+                    <span class="pill pill-location"><i class="fa-solid fa-location-dot"></i> {{ loc }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <span class="empty-state-text">No se identificaron ubicaciones.</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="entities-group"
+                style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1.5rem;">
+                <div class="entities-title">Confiabilidad de la Extracción</div>
+                <div class="confidence-widget">
+                    <div class="confidence-bar-wrapper">
+                        <!-- Cálculo de porcentaje de confianza -->
+                        <div class="confidence-bar"
+                            style="width: {% widthratio story.extraction.confidence_score 1 100 %}%"></div>
+                    </div>
+                    <span class="confidence-val">{% widthratio story.extraction.confidence_score 1 100 %}%</span>
+                </div>
+                <div class="story-meta"
+                    style="font-size: 0.75rem; margin-top: 0.5rem; display: flex; justify-content: space-between;">
+                    <span>Modelo: {{ story.extraction.model_version }}</span>
+                    {% if story.extraction.processing_time_ms %}
+                    <span>Tardó {{ story.extraction.processing_time_ms }}ms</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            {% if story.extraction_status == 'failed' %}
+            <div class="empty-state" style="padding: 1.5rem 0;">
+                <i class="fa-solid fa-circle-exclamation"
+                    style="font-size: 2rem; color: hsl(var(--danger)); margin-bottom: 0.75rem;"></i>
+                <p class="story-meta" style="font-size: 0.85rem; color: hsl(var(--danger));">La extracción falló.</p>
+                <p style="font-size: 0.8rem; color: hsl(var(--text-muted)); margin-top: 0.5rem;">{{
+                    story.extraction_error }}</p>
+            </div>
+            {% else %}
+            <!-- Contenedor de HTMX para refrescar estado en barra lateral -->
+            <div class="empty-state" style="padding: 2.5rem 0;" hx-get="{% url 'stories:extraction-status' story.id %}"
+                hx-trigger="every 3s" hx-swap="outerHTML">
+                <i class="fa-solid fa-gear fa-spin empty-state-icon" style="font-size: 2rem;"></i>
+                <p class="story-meta">El modelo de IA está procesando. Los resultados se cargarán automáticamente...</p>
+            </div>
+            {% endif %}
+            {% endif %}
         </div>
+
+    </div>
     {% endif %}
 </div>
 
