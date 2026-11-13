@@ -214,20 +214,31 @@ class SocialPostApprovalTests(TestCase):
             status="published"
         )
         
-        # Create TextExtraction and SocialPost
-        from apps.extractions.models import TextExtraction
         from apps.social_posts.models import SocialPost
-        self.extraction = TextExtraction.objects.create(
-            story=self.story,
-            extracted_text="A summary.",
-            confidence_score=0.9
-        )
         self.post = SocialPost.objects.create(
-            extraction=self.extraction,
+            story=self.story,
             platform="twitter",
-            generated_text="AI Tweet content",
+            generated_text="Manual Tweet content",
             status="draft"
         )
+
+    def test_edit_social_post_requires_staff(self):
+        response = self.client.post(
+            reverse('stories:social-edit', args=[self.post.id]),
+            {'edited_text': 'Edited manually', 'edited_hashtags': '#relato'}
+        )
+        self.assertEqual(response.status_code, 401)
+
+        self.client.login(username='admin', password='password123')
+        response = self.client.post(
+            reverse('stories:social-edit', args=[self.post.id]),
+            {'edited_text': 'Edited manually', 'edited_hashtags': '#relato'},
+            HTTP_HX_REQUEST='true'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.user_edited_text, 'Edited manually')
+        self.assertEqual(self.post.hashtags, '#relato')
 
     def test_approve_social_post_requires_staff(self):
         # Anonymous fails
@@ -256,46 +267,138 @@ class SocialPostApprovalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.post.refresh_from_db()
         self.assertEqual(self.post.status, 'draft')
-        self.assertContains(response, 'Borrador IA')
+        self.assertContains(response, 'Borrador')
+
+    def test_publish_social_post_synchronously(self):
+        self.post.status = 'accepted'
+        self.post.user_edited_text = 'Manual post ready to publish'
+        self.post.save()
+
+        self.client.login(username='admin', password='password123')
+        response = self.client.post(reverse('stories:social-publish', args=[self.post.id]), HTTP_HX_REQUEST='true')
+        self.assertEqual(response.status_code, 200)
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.status, 'published')
+        self.assertIsNotNone(self.post.published_at)
+        self.assertContains(response, 'Publicado')
 
 
-class StoryAudioTests(TestCase):
+class StoryWebSpeechAudioTests(TestCase):
     def setUp(self):
         self.staff_user = User.objects.create_user(username='admin', password='password123', is_staff=True)
         self.client = Client()
         self.story = Story.objects.create(
             user=self.staff_user,
             title="Audio Story",
-            content="Once upon a time.",
+            content="Once upon a time. A second sentence for TTS.",
             status="published"
         )
 
-    def test_story_audio_status_view(self):
-        # Default state is 'pending'
-        response = self.client.get(reverse('stories:audio-status', args=[self.story.id]))
+    def test_story_detail_renders_web_speech_player(self):
+        response = self.client.get(reverse('stories:story-detail', args=[self.story.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Sintetizando audiolibro')
-        
-        # When status is 'completed'
-        self.story.audio_status = 'completed'
-        from django.core.files.base import ContentFile
-        self.story.audio_file.save('test.wav', ContentFile(b'fake audio content'))
-        self.story.save()
-        
-        response = self.client.get(reverse('stories:audio-status', args=[self.story.id]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Escuchar Audiolibro')
+        self.assertContains(response, 'id="tts-audio-player"')
+        self.assertContains(response, 'id="tts-play-pause-btn"')
+        self.assertContains(response, 'id="tts-prev-btn"')
+        self.assertContains(response, 'id="tts-next-btn"')
+        self.assertContains(response, 'id="tts-stop-btn"')
+        self.assertContains(response, 'id="tts-rate-select"')
+        self.assertContains(response, 'Web Speech')
 
-    def test_regenerate_story_audio_requires_staff(self):
-        # Anonymous fails
-        response = self.client.post(reverse('stories:audio-regenerate', args=[self.story.id]))
-        self.assertEqual(response.status_code, 401)
-        
-        # Staff succeeds and triggers task
-        self.client.login(username='admin', password='password123')
-        response = self.client.post(reverse('stories:audio-regenerate', args=[self.story.id]), HTTP_HX_REQUEST='true')
-        self.assertEqual(response.status_code, 200)
-        self.story.refresh_from_db()
-        self.assertEqual(self.story.audio_status, 'pending')
+    def test_reading_time_minutes_calculation(self):
+        short_story = Story.objects.create(
+            user=self.staff_user,
+            title="Short Story",
+            content=" ".join(["palabra"] * 80),
+            status="published"
+        )
+        self.assertEqual(short_story.reading_time_minutes, 1)
+
+        long_story = Story.objects.create(
+            user=self.staff_user,
+            title="Long Story",
+            content=" ".join(["palabra"] * 450),
+            status="published"
+        )
+        self.assertEqual(long_story.reading_time_minutes, 3)
+
+
+class SecurityAndSeoTests(TestCase):
+    def setUp(self):
+        self.staff_user = User.objects.create_user(username='admin', password='password123', is_staff=True)
+        self.client = Client()
+        self.category = Category.objects.create(name="Relatos", slug="relatos")
+        self.story = Story.objects.create(
+            user=self.staff_user,
+            title="Relato de Prueba SEO",
+            content="<p>Este es el contenido completo de un relato literario para verificar RSS y Sitemap.</p>",
+            excerpt="Extracto para OpenGraph y RSS.",
+            category=self.category,
+            status="published"
+        )
+
+    def test_comment_honeypot_blocks_spam_bot(self):
+        before = Comment.objects.count()
+        response = self.client.post(
+            reverse('stories:add-comment', args=[self.story.id]),
+            {
+                'author_name': 'SpamBot',
+                'content': 'Buy cheap tokens!',
+                'website_url': 'http://evil-spam.example.com',
+            },
+            HTTP_HX_REQUEST='true'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Comment.objects.count(), before)
+
+    def test_comment_ip_rate_limit_blocks_fourth_comment_within_5_minutes(self):
+        url = reverse('stories:add-comment', args=[self.story.id])
+        for i in range(3):
+            resp = self.client.post(
+                url,
+                {'author_name': f'Reader {i}', 'content': f'Comentario {i}'},
+                REMOTE_ADDR='203.0.113.42',
+                HTTP_HX_REQUEST='true'
+            )
+            self.assertEqual(resp.status_code, 200)
+
+        fourth_resp = self.client.post(
+            url,
+            {'author_name': 'Reader 4', 'content': 'Cuarto comentario seguido'},
+            REMOTE_ADDR='203.0.113.42',
+            HTTP_HX_REQUEST='true'
+        )
+        self.assertEqual(fourth_resp.status_code, 429)
+        self.assertContains(fourth_resp, 'Has enviado demasiados comentarios', status_code=429)
+
+    def test_banner_html_code_blocks_xss_vectors(self):
+        from django.core.exceptions import ValidationError
+        for malicious_html in [
+            "<script>alert(1)</script>",
+            "<iframe src='https://evil.example.com'></iframe>",
+            "<div onclick='alert(1)'>Banner</div>",
+            "<a href='javascript:alert(1)'>Click</a>",
+        ]:
+            banner = Banner(title="Bad Banner", position="arriba", html_code=malicious_html)
+            with self.assertRaises(ValidationError):
+                banner.clean()
+
+    def test_rss_feed_and_sitemap_xml_respond_with_valid_xml(self):
+        rss_resp = self.client.get(reverse('stories:rss-feed'))
+        self.assertEqual(rss_resp.status_code, 200)
+        self.assertIn('xml', rss_resp['Content-Type'])
+        self.assertContains(rss_resp, 'Relato de Prueba SEO')
+
+        sitemap_resp = self.client.get('/sitemap.xml')
+        self.assertEqual(sitemap_resp.status_code, 200)
+        self.assertIn('xml', sitemap_resp['Content-Type'])
+        self.assertContains(sitemap_resp, f'/{self.story.id}/')
+
+    def test_story_detail_includes_opengraph_meta_tags(self):
+        resp = self.client.get(reverse('stories:story-detail', args=[self.story.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'property="og:title" content="Relato de Prueba SEO"')
+        self.assertContains(resp, 'property="og:type" content="article"')
+        self.assertContains(resp, 'name="twitter:card" content="summary_large_image"')
 
 

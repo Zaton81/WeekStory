@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ story.title }}{% endblock %}
+{% block meta_description %}{{ story.excerpt|default:story.content|striptags|truncatechars:160 }}{% endblock %}
+{% block og_title %}{{ story.title }}{% endblock %}
+{% block og_description %}{{ story.excerpt|default:story.content|striptags|truncatechars:160 }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{% if story.cover_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ story.cover_image.url }}">{% endif %}{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 2rem;">
@@ -13,6 +18,7 @@
             <div class="story-meta" style="margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem 0.8rem;">
                 <span><i class="fa-regular fa-calendar-days"></i> Creado el {{ story.created_at|date:"d F, Y" }}</span>
                 <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} palabras</span>
+                <span><i class="fa-regular fa-clock"></i> {{ story.reading_time_minutes }} min de lectura</span>
                 {% if story.category %}
                 <span class="badge badge-category"><i class="fa-solid fa-folder"></i> {{ story.category.name }}</span>
                 {% endif %}
@@ -22,8 +28,7 @@
                 {% elif story.status == 'published' %}
                 <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
                 {% elif story.status == 'scheduled' %}
-                <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado {{
-                    story.scheduled_at|date:"d/m/Y H:i" }}</span>
+                <span class="badge badge-scheduled"><i class="fa-solid fa-clock"></i> Programado {{ story.scheduled_at|date:"d/m/Y H:i" }}</span>
                 {% else %}
                 <span class="badge badge-archived"><i class="fa-solid fa-box-archive"></i> Archivado</span>
                 {% endif %}
@@ -45,8 +50,7 @@
     </div>
 </div>
 
-<div class="{% if user.is_authenticated and user.is_staff %}detail-layout{% endif %}">
-    <!-- Columna Izquierda: Contenido de la historia, Historias relacionadas, Comentarios y (para admins) Publicaciones en redes sociales -->
+<div>
     <div style="display: flex; flex-direction: column; gap: 2rem;">
 
         <!-- Imagen de portada -->
@@ -56,7 +60,7 @@
         </div>
         {% endif %}
 
-        <!-- Reproductor de Audio (IA Local) -->
+        <!-- Reproductor de Audio (Web Speech API en Navegador) -->
         {% include 'stories/story_audio_partial.html' %}
 
         <!-- Botones de Compartir (Visible para todos los usuarios) -->
@@ -68,32 +72,26 @@
                 <i class="fa-solid fa-share-nodes"></i> Compartir
             </span>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <!-- Twitter/X -->
                 <button class="share-btn share-btn-twitter" onclick="shareStory('twitter')"
                     title="Compartir en Twitter/X">
                     <i class="fa-brands fa-twitter"></i>
                 </button>
-                <!-- Facebook -->
                 <button class="share-btn share-btn-facebook" onclick="shareStory('facebook')"
                     title="Compartir en Facebook">
                     <i class="fa-brands fa-facebook-f"></i>
                 </button>
-                <!-- LinkedIn -->
                 <button class="share-btn share-btn-linkedin" onclick="shareStory('linkedin')"
                     title="Compartir en LinkedIn">
                     <i class="fa-brands fa-linkedin-in"></i>
                 </button>
-                <!-- WhatsApp -->
                 <button class="share-btn share-btn-whatsapp" onclick="shareStory('whatsapp')"
                     title="Compartir en WhatsApp">
                     <i class="fa-brands fa-whatsapp"></i>
                 </button>
-                <!-- Telegram -->
                 <button class="share-btn share-btn-telegram" onclick="shareStory('telegram')"
                     title="Compartir en Telegram">
                     <i class="fa-brands fa-telegram"></i>
                 </button>
-                <!-- Copiar enlace -->
                 <button class="share-btn share-btn-copy" onclick="copyStoryLink(this)" title="Copiar enlace">
                     <i class="fa-solid fa-link"></i>
                 </button>
@@ -102,7 +100,6 @@
         <script>
             function shareStory(platform) {
                 var url = encodeURIComponent(window.location.href);
-                var title = encodeURIComponent('{{ story.title|escapejs }}');
                 var text = encodeURIComponent('{{ story.title|escapejs }}' + ' — ¡Léelo aquí!');
                 var shareUrl = '';
 
@@ -147,6 +144,14 @@
 
         <!-- Tarjeta de Contenido de la Historia -->
         <div class="glass-card story-content-panel">
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem; gap: 0.5rem;">
+                <span class="story-meta" style="font-size: 0.78rem;">Tamaño de letra:</span>
+                <div class="font-size-controls" role="group" aria-label="Tamaño tipográfico">
+                    <button type="button" class="font-size-btn" data-size="sm" onclick="window.setStoryFontSize('sm')" title="Texto pequeño">A-</button>
+                    <button type="button" class="font-size-btn active" data-size="md" onclick="window.setStoryFontSize('md')" title="Texto normal">A</button>
+                    <button type="button" class="font-size-btn" data-size="lg" onclick="window.setStoryFontSize('lg')" title="Texto grande">A+</button>
+                </div>
+            </div>
             {% if story.excerpt %}
             <div
                 style="background: rgba(255,255,255,0.03); border-left: 3px solid hsl(var(--secondary)); padding: 1rem; border-radius: 4px; font-style: italic; margin-bottom: 1.5rem; color: hsl(var(--text-muted));">
@@ -203,6 +208,7 @@
                 hx-on::after-request="if(event.detail.successful) this.reset();"
                 style="margin-bottom: 2rem; margin-top: 1rem;">
                 {% csrf_token %}
+                {{ comment_form.website_url }}
                 <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label" for="id_author_name">Tu Nombre <span
@@ -243,14 +249,11 @@
         <!-- Tarjeta de Publicaciones en Redes Sociales (Solo Administradores) -->
         {% if user.is_authenticated and user.is_staff %}
         <div class="glass-card social-dashboard">
-            <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Publicaciones en Redes Generadas</h2>
-            <p class="story-meta" style="margin-bottom: 1.5rem;">Borradores generados por IA local (Ollama) optimizados
-                para distribución multiplataforma.</p>
+            <h2 class="gradient-text"><i class="fa-solid fa-share-nodes"></i> Publicaciones en Redes Sociales</h2>
+            <p class="story-meta" style="margin-bottom: 1.5rem;">Edita manualmente el texto para cada red social y publícalo directamente.</p>
 
-            {% if story.extraction %}
-            {% with posts=story.extraction.social_posts.all %}
+            {% with posts=story.social_posts.all %}
             {% if posts %}
-            <!-- Pestañas -->
             <div class="social-tabs">
                 {% for post in posts %}
                 <button class="social-tab {% if forloop.first %}active{% endif %}"
@@ -270,286 +273,14 @@
                 {% endfor %}
             </div>
 
-            <!-- Contenidos de pestaña -->
             {% for post in posts %}
-            <div id="post-{{ post.platform }}" class="tab-content {% if forloop.first %}active{% endif %}" 
-                 {% if post.status == 'scheduled' %} 
-                 hx-get="{% url 'stories:social-status' post.id %}" hx-trigger="every 3s" hx-swap="outerHTML" 
-                 {% endif %}>
-                <div class="post-preview-card">
-                    <div class="platform-brand-header">
-                        <div class="platform-name">
-                            {% if post.platform == 'twitter' %}
-                            <i class="fa-brands fa-twitter platform-icon-twitter"></i> Twitter/X
-                            {% elif post.platform == 'linkedin' %}
-                            <i class="fa-brands fa-linkedin-in platform-icon-linkedin"></i> LinkedIn
-                            {% elif post.platform == 'instagram' %}
-                            <i class="fa-brands fa-instagram platform-icon-instagram"></i> Instagram
-                            {% elif post.platform == 'facebook' %}
-                            <i class="fa-brands fa-facebook-f platform-icon-facebook"></i> Facebook
-                            {% endif %}
-                        </div>
-                        {% if post.status == 'published' %}
-                        <span class="badge badge-published"><i class="fa-solid fa-circle-check"></i> Publicado</span>
-                        {% elif post.status == 'scheduled' %}
-                        <span class="badge badge-scheduled"><i class="fa-solid fa-spinner fa-spin"></i>
-                            Publicando...</span>
-                        {% elif post.status == 'accepted' %}
-                        <span class="badge badge-published"
-                            style="background: rgba(16,185,129,0.15); color: #10b981;"><i
-                                class="fa-solid fa-square-check"></i> Aprobado (Listo)</span>
-                        {% elif post.status == 'failed' %}
-                        <span class="badge badge-draft"
-                            style="background: rgba(239,68,68,0.15); color: hsl(var(--danger));"><i
-                                class="fa-solid fa-triangle-exclamation"></i> Error</span>
-                        {% else %}
-                        <span class="badge badge-draft"><i class="fa-solid fa-pen-ruler"></i> Borrador IA</span>
-                        {% endif %}
-                    </div>
-
-                    <div
-                        style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; font-family: var(--font-body); font-size: 0.95rem; white-space: pre-line; color: hsl(var(--text-primary)); min-height: 80px;">
-                        {{ post.user_edited_text|default:post.generated_text }}</div>
-
-                    {% if post.hashtags %}
-                    <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
-                        {% for tag in post.hashtags.split %}
-                        {% if tag|first == '#' %}
-                        <span class="pill pill-character" style="font-size: 0.75rem;">{{ tag }}</span>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-
-                    {% if post.status == 'failed' and post.error_message %}
-                    <div
-                        style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.85rem; color: hsl(var(--danger));">
-                        <i class="fa-solid fa-circle-exclamation"></i> {{ post.error_message }}
-                    </div>
-                    {% endif %}
-
-                    {% if post.published_url %}
-                    <div style="margin-top: 0.75rem; font-size: 0.8rem;">
-                        <a href="{{ post.published_url }}" target="_blank" style="color: hsl(var(--secondary));">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver publicación
-                        </a>
-                    </div>
-                    {% endif %}
-
-                    <div
-                        style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
-                        {% if post.status == 'draft' or post.status == 'failed' %}
-                        <button class="btn btn-secondary btn-sm" hx-get="{% url 'stories:social-edit' post.id %}"
-                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
-                            <i class="fa-solid fa-pen"></i> Editar
-                        </button>
-                        <button class="btn btn-secondary btn-sm" hx-post="{% url 'stories:social-regenerate' post.id %}"
-                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML"
-                            hx-confirm="¿Regenerar el borrador con IA? Se perderán las ediciones manuales.">
-                            <i class="fa-solid fa-arrows-rotate"></i> Regenerar
-                        </button>
-                        <button class="btn btn-primary btn-sm" hx-post="{% url 'stories:social-approve' post.id %}"
-                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
-                            <i class="fa-solid fa-check"></i> Aprobar Borrador
-                        </button>
-                        {% elif post.status == 'accepted' %}
-                        <button class="btn btn-secondary btn-sm" hx-get="{% url 'stories:social-edit' post.id %}"
-                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
-                            <i class="fa-solid fa-pen"></i> Editar
-                        </button>
-                        <button class="btn btn-secondary btn-sm" hx-post="{% url 'stories:social-reject' post.id %}"
-                            hx-target="#post-{{ post.platform }}" hx-swap="outerHTML">
-                            <i class="fa-solid fa-xmark"></i> Volver a Borrador
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="openSocialPublishWindow_{{ post.id }}()"
-                            id="publish-btn-init-{{ post.id }}">
-                            <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+            {% include 'stories/social_post_action_partial.html' with post=post is_active=forloop.first %}
             {% endfor %}
-
-            {# JavaScript para los botones de publicar en ventana nativa #}
-            {% for post in posts %}
-            {% if post.status == 'accepted' %}
-            <div id="social-data-{{ post.id }}" data-text="{{ post.user_edited_text|default:post.generated_text }}"
-                data-hashtags="{{ post.hashtags }}" data-platform="{{ post.platform }}" style="display:none;"></div>
-            <script>
-                (function () {
-                    window['openSocialPublishWindow_{{ post.id }}'] = function () {
-                        var dataEl = document.getElementById('social-data-{{ post.id }}');
-                        var postText = dataEl.getAttribute('data-text');
-                        var hashtags = dataEl.getAttribute('data-hashtags');
-                        var fullText = hashtags ? postText + '\n\n' + hashtags : postText;
-                        var platform = dataEl.getAttribute('data-platform');
-                        var publishUrl = '';
-                        var storyUrl = window.location.href;
-
-                        // Reemplazar [ENLACE] por la URL real o añadirlo al final si no está
-                        if (fullText.includes('[ENLACE]')) {
-                            fullText = fullText.replace(/\[ENLACE\]/g, storyUrl);
-                        } else {
-                            fullText = fullText + '\n\n' + storyUrl;
-                        }
-
-                        if (platform === 'twitter') {
-                            publishUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(fullText);
-                        } else if (platform === 'facebook') {
-                            publishUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encodeURIComponent(fullText) + '&u=' + encodeURIComponent(storyUrl);
-                        } else if (platform === 'linkedin') {
-                            publishUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(storyUrl);
-                        } else if (platform === 'instagram') {
-                            navigator.clipboard.writeText(fullText).then(function () {
-                                alert('📋 Texto copiado al portapapeles.\n\nAbre Instagram y pega el texto en tu nueva publicación.');
-                                window.open('https://www.instagram.com/', '_blank');
-                            }).catch(function () {
-                                prompt('Copia el siguiente texto y publícalo en Instagram:', fullText);
-                                window.open('https://www.instagram.com/', '_blank');
-                            });
-                        }
-                        if (publishUrl) {
-                            window.open(publishUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
-                        }
-                        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-                        htmx.ajax('POST', '{% url "stories:social-publish" post.id %}', {
-                            target: '#post-{{ post.platform }}',
-                            swap: 'outerHTML',
-                            headers: { 'X-CSRFToken': csrfToken ? csrfToken.value : '{{ csrf_token }}' }
-                        });
-                    };
-                })();
-            </script>
-            {% endif %}
-            {% endfor %}
-            {% else %}
-            <div class="empty-state" style="padding: 2rem 1rem;">
-                <p class="story-meta">No se han generado publicaciones sociales. Vuelve a comprobar en unos segundos.
-                </p>
-            </div>
             {% endif %}
             {% endwith %}
-            {% else %}
-            <div class="empty-state" style="padding: 2rem 1rem;">
-                <i class="fa-solid fa-circle-notch fa-spin empty-state-icon" style="font-size: 2rem;"></i>
-                <p class="story-meta" style="margin-top: 1rem;">La generación de publicaciones sociales por IA está
-                    esperando a que termine la extracción de texto.</p>
-            </div>
-            {% endif %}
         </div>
         {% endif %}
 
     </div>
-
-    <!-- Columna Derecha: Extracción de IA y Detalles (Solo Administradores) -->
-    {% if user.is_authenticated and user.is_staff %}
-    <div class="detail-sidebar">
-
-        <!-- Tarjeta de Resumen de Extracción de IA -->
-        <div class="glass-card" style="padding: 1.5rem;">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;" class="gradient-text">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Análisis de IA
-                </h3>
-                {% include 'stories/story_extraction_partial.html' with story=story %}
-            </div>
-
-            {% if story.extraction %}
-            <div class="entities-group" style="margin-top: 0;">
-                <div class="entities-title">Resumen Extraído</div>
-                <div
-                    style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.5; color: hsl(var(--text-muted)); max-height: 250px; overflow-y: auto;">
-                    {{ story.extraction.extracted_text }}
-                </div>
-            </div>
-
-            <div class="entities-group">
-                <div class="entities-title"><i class="fa-solid fa-users"></i> Personajes</div>
-                <div class="tags-container">
-                    {% if story.extraction.entities.characters %}
-                    {% for char in story.extraction.entities.characters %}
-                    <span class="pill pill-character"><i class="fa-regular fa-user"></i> {{ char }}</span>
-                    {% endfor %}
-                    {% else %}
-                    <span class="empty-state-text">No se identificaron personajes.</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="entities-group">
-                <div class="entities-title"><i class="fa-solid fa-map-location-dot"></i> Ubicaciones</div>
-                <div class="tags-container">
-                    {% if story.extraction.entities.locations %}
-                    {% for loc in story.extraction.entities.locations %}
-                    <span class="pill pill-location"><i class="fa-solid fa-location-dot"></i> {{ loc }}</span>
-                    {% endfor %}
-                    {% else %}
-                    <span class="empty-state-text">No se identificaron ubicaciones.</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="entities-group"
-                style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1.5rem;">
-                <div class="entities-title">Confiabilidad de la Extracción</div>
-                <div class="confidence-widget">
-                    <div class="confidence-bar-wrapper">
-                        <!-- Cálculo de porcentaje de confianza -->
-                        <div class="confidence-bar"
-                            style="width: {% widthratio story.extraction.confidence_score 1 100 %}%"></div>
-                    </div>
-                    <span class="confidence-val">{% widthratio story.extraction.confidence_score 1 100 %}%</span>
-                </div>
-                <div class="story-meta"
-                    style="font-size: 0.75rem; margin-top: 0.5rem; display: flex; justify-content: space-between;">
-                    <span>Modelo: {{ story.extraction.model_version }}</span>
-                    {% if story.extraction.processing_time_ms %}
-                    <span>Tardó {{ story.extraction.processing_time_ms }}ms</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% else %}
-            {% if story.extraction_status == 'failed' %}
-            <div class="empty-state" style="padding: 1.5rem 0;">
-                <i class="fa-solid fa-circle-exclamation"
-                    style="font-size: 2rem; color: hsl(var(--danger)); margin-bottom: 0.75rem;"></i>
-                <p class="story-meta" style="font-size: 0.85rem; color: hsl(var(--danger));">La extracción falló.</p>
-                <p style="font-size: 0.8rem; color: hsl(var(--text-muted)); margin-top: 0.5rem;">{{
-                    story.extraction_error }}</p>
-            </div>
-            {% else %}
-            <!-- Contenedor de HTMX para refrescar estado en barra lateral -->
-            <div class="empty-state" style="padding: 2.5rem 0;" hx-get="{% url 'stories:extraction-status' story.id %}"
-                hx-trigger="every 3s" hx-swap="outerHTML">
-                <i class="fa-solid fa-gear fa-spin empty-state-icon" style="font-size: 2rem;"></i>
-                <p class="story-meta">El modelo de IA está procesando. Los resultados se cargarán automáticamente...</p>
-            </div>
-            {% endif %}
-            {% endif %}
-        </div>
-
-    </div>
-    {% endif %}
 </div>
-
-<!-- Lógica de Pestañas para Administradores -->
-{% if user.is_authenticated and user.is_staff %}
-<script>
-    function switchTab(evt, platformName) {
-        var i, tabcontent, tablinks;
-        tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].classList.remove("active");
-        }
-        tablinks = document.getElementsByClassName("social-tab");
-        for (i = 0; i < tablinks.length; i++) {
-            tablinks[i].classList.remove("active");
-        }
-        document.getElementById("post-" + platformName).classList.add("active");
-        evt.currentTarget.classList.add("active");
-    }
-</script>
-{% endif %}
 {% endblock %}

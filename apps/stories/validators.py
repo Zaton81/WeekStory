@@ -1,10 +1,33 @@
+import re
 from django.core.exceptions import ValidationError
 from django.core.files.images import get_image_dimensions
+
+DANGEROUS_HTML_PATTERNS = [
+    (re.compile(r'<\s*script\b', re.IGNORECASE), "No se permiten etiquetas <script> en el código HTML del banner."),
+    (re.compile(r'<\s*iframe\b', re.IGNORECASE), "No se permiten etiquetas <iframe> en el código HTML del banner."),
+    (re.compile(r'<\s*(object|embed|applet|meta|link|style|form)\b', re.IGNORECASE), "El código HTML contiene etiquetas no permitidas."),
+    (re.compile(r'\bon[a-z]+\s*=', re.IGNORECASE), "No se permiten atributos de eventos JavaScript inline (como onclick, onload, onerror)."),
+    (re.compile(r'javascript\s*:', re.IGNORECASE), "No se permiten enlaces o atributos con el protocolo javascript:."),
+]
+
+
+def validate_banner_html_code(value):
+    """
+    Valida que el campo html_code de Banner no contenga vectores XSS:
+    bloquea <script>, <iframe>, etiquetas peligrosas, atributos on* y protocolo javascript:.
+    """
+    if not value:
+        return
+
+    for pattern, error_msg in DANGEROUS_HTML_PATTERNS:
+        if pattern.search(value):
+            raise ValidationError(error_msg)
+
 
 def validate_image_size_and_dimensions(value):
     """
     Valida que la imagen:
-    1. No supere los 5 MB de tamaño de archivo.
+    1. No supere los 10 MB de tamaño de archivo.
     2. No supere los 4000x4000 píxeles de resolución (para evitar sobrecarga).
     3. Sea un archivo de imagen válido.
     """

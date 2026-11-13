@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("extractions", "0001_initial"),
+        ("stories", "0001_initial"),
     ]
 
     operations = [
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                         max_length=20,
                     ),
                 ),
-                ("generated_text", models.TextField()),
+                ("generated_text", models.TextField(blank=True, default="")),
                 (
                     "user_edited_text",
                     models.TextField(blank=True, help_text="User's edited version"),
@@ -73,17 +73,17 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 (
-                    "extraction",
+                    "story",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="social_posts",
-                        to="extractions.textextraction",
+                        to="stories.story",
                     ),
                 ),
             ],
             options={
                 "ordering": ["-created_at"],
-                "unique_together": {("extraction", "platform")},
+                "unique_together": {("story", "platform")},
             },
         ),
         migrations.CreateModel(

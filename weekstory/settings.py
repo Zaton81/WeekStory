@@ -11,9 +11,28 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import importlib.util
 import os
-import dj_database_url
-from decouple import config, Csv
+
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
+try:
+    from decouple import config, Csv
+except ImportError:
+    class Csv:
+        def __call__(self, value):
+            return [item.strip() for item in str(value).split(',') if item.strip()]
+
+    def config(key, default=None, cast=None):
+        val = os.environ.get(key, default)
+        if cast is not None and val is not None:
+            if cast is bool and isinstance(val, str):
+                return val.lower() in ('1', 'true', 'yes', 'on')
+            return cast(val)
+        return val
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,19 +53,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     
     # Third-party apps
-    'django_filters',
-    'django_celery_beat',
-    'django_celery_results',
-    'whitenoise.runserver_nostatic',
+    *(['django_filters'] if importlib.util.find_spec('django_filters') else []),
+    *(['whitenoise.runserver_nostatic'] if importlib.util.find_spec('whitenoise') else []),
     'django_ckeditor_5',
     
     # WeekStory apps
     'apps.stories',
-    'apps.extractions',
     'apps.social_posts',
-    'apps.ai_models',
     'apps.legal',
     'apps.social_links',
     'apps.pages',
@@ -54,7 +70,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    *(['whitenoise.middleware.WhiteNoiseMiddleware'] if importlib.util.find_spec('whitenoise') else []),
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -85,13 +101,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'weekstory.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+if dj_database_url is not None:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL', 'sqlite:///db.sqlite3'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -110,7 +134,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+if importlib.util.find_spec('whitenoise'):
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
@@ -154,30 +179,8 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
-
-# Django Celery Beat
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
-# AI Models Configuration
-TRANSFORMERS_CACHE = config('TRANSFORMERS_CACHE', '/app/models/transformers')
-TORCH_HOME = config('TORCH_HOME', '/app/models/torch')
-MODEL_NER = config('MODEL_NER', 'dslim/bert-base-multilingual-cased-ner')
-MODEL_SUMMARIZATION = config('MODEL_SUMMARIZATION', 'facebook/bart-large-cnn')
-MODEL_TEXT_GENERATION = config('MODEL_TEXT_GENERATION', 'gpt2')
-OLLAMA_API_URL = config('OLLAMA_API_URL', 'http://localhost:11434')
-
-# AI Processing Settings
-CONFIDENCE_THRESHOLD = config('CONFIDENCE_THRESHOLD', 0.75, cast=float)
+# Story & Social Settings
 MAX_STORY_LENGTH = config('MAX_STORY_LENGTH', 10000, cast=int)
-MAX_EXTRACTION_LENGTH = config('MAX_EXTRACTION_LENGTH', 500, cast=int)
-ENABLE_AI_EXTRACTION = config('ENABLE_AI_EXTRACTION', True, cast=bool)
 ENABLE_SOCIAL_POSTING = config('ENABLE_SOCIAL_POSTING', True, cast=bool)
 
 # Social Media API Keys
@@ -201,6 +204,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'noreply@weekstory.local')
 
 # Logging Configuration
+_HAS_JSON_LOGGER = importlib.util.find_spec('pythonjsonlogger') is not None
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -209,15 +213,21 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
-        'json': {
-            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-            'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
-        },
+        **(
+            {
+                'json': {
+                    '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+                    'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
+                }
+            }
+            if _HAS_JSON_LOGGER
+            else {}
+        ),
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'json',
+            'formatter': 'json' if _HAS_JSON_LOGGER else 'verbose',
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -237,11 +247,6 @@ LOGGING = {
             'level': config('LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        'celery': {
-            'handlers': ['console', 'file'],
-            'level': config('LOG_LEVEL', 'INFO'),
-            'propagate': False,
-        },
         'apps': {
             'handlers': ['console', 'file'],
             'level': config('LOG_LEVEL', 'INFO'),
@@ -256,7 +261,7 @@ LOGS_DIR.mkdir(exist_ok=True)
 
 # Security Settings for Production
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
@@ -271,11 +276,10 @@ SENTRY_DSN = config('SENTRY_DSN', '')
 if SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.celery import CeleryIntegration
     
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration(), CeleryIntegration()],
+        integrations=[DjangoIntegration()],
         traces_sample_rate=0.1,
         send_default_pii=False,
     )

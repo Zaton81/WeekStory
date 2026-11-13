@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django_ckeditor_5.fields import CKEditor5Field
 from apps.stories.validators import validate_image_size_and_dimensions
 
@@ -48,3 +49,6 @@ class Page(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse('pages:page-detail', args=[self.slug])

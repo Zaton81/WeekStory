@@ -76,6 +76,7 @@
                                 <div class="story-meta" style="margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem 0.8rem;">
                                     <span><i class="fa-regular fa-calendar-days"></i> {{ story.created_at|date:"d M, Y" }}</span>
                                     <span><i class="fa-solid fa-calculator"></i> {{ story.word_count }} palabras</span>
+                                    <span><i class="fa-regular fa-clock"></i> {{ story.reading_time_minutes }} min de lectura</span>
                                     {% if story.category %}
                                         <span class="badge badge-category"><i class="fa-solid fa-folder"></i> {{ story.category.name }}</span>
                                     {% endif %}
@@ -108,12 +109,7 @@
                         </div>
                         
                         {% if user.is_authenticated and user.is_staff %}
-                            <div class="story-card-footer">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span class="story-meta" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Estado IA:</span>
-                                    {% include 'stories/story_extraction_partial.html' with story=story %}
-                                </div>
-                                
+                            <div class="story-card-footer" style="justify-content: flex-end;">
                                 <div style="display: flex; gap: 0.5rem;">
                                     <a href="{% url 'stories:story-edit' story.id %}" class="btn btn-secondary btn-sm" title="Editar Historia">
                                         <i class="fa-solid fa-pen-to-square"></i>
@@ -185,7 +181,7 @@
                     {% for cat in all_categories %}
                         <a href="{% url 'stories:story-list' %}?category={{ cat.slug }}" class="nav-link {% if request.GET.category == cat.slug %}active{% endif %}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border-radius: var(--border-radius-sm);">
                             <span>{{ cat.name }}</span>
-                            <span class="badge badge-category" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;">{{ cat.stories.count }}</span>
+                            <span class="badge badge-category" style="padding: 0.15rem 0.4rem; font-size: 0.7rem;">{{ cat.published_stories_count|default:0 }}</span>
                         </a>
                     {% endfor %}
                 </div>

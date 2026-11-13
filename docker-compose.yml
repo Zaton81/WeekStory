@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # PostgreSQL Database
   db:
@@ -18,43 +16,26 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache & Celery Broker
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Django Application
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8000:8000"
     environment:
       DEBUG: "True"
       SECRET_KEY: "your-secret-key-here-change-in-production"
       DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
       ALLOWED_HOSTS: localhost,127.0.0.1,web
-      OLLAMA_API_URL: http://ollama:11434
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-      - models_volume:/app/models
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -62,65 +43,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Celery Worker (Background Tasks: AI Extraction, Social Posting)
-  celery_worker:
-    build: .
-    command: celery -A weekstory worker --loglevel=info --concurrency=2 --max-tasks-per-child=1000
-    environment:
-      DEBUG: "True"
-      SECRET_KEY: "your-secret-key-here-change-in-production"
-      DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-      OLLAMA_API_URL: http://ollama:11434
-    volumes:
-      - .:/app
-      - models_volume:/app/models
-    depends_on:
-      - db
-      - redis
-      - web
-      - ollama
-    healthcheck:
-      test: ["CMD", "celery", "-A", "weekstory", "inspect", "active"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Celery Beat (Task Scheduler)
-  celery_beat:
-    build: .
-    command: celery -A weekstory beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    environment:
-      DEBUG: "True"
-      SECRET_KEY: "your-secret-key-here-change-in-production"
-      DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
-      - web
-
-  # Ollama - Local AI Model Server
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
-  # Nginx Reverse Proxy (Optional, for production)
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:latest
     ports:
@@ -135,8 +58,5 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   static_volume:
   media_volume:
-  models_volume:
-  ollama_data:

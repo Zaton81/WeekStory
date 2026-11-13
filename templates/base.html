@@ -5,7 +5,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WeekStory{% endblock %} | Historias Semanales y Hub de Redes Sociales con IA</title>
+    <title>{% block title %}WeekStory{% endblock %} | Relatos Semanales</title>
+
+    <!-- SEO & OpenGraph Meta Tags -->
+    <meta name="description" content="{% block meta_description %}Plataforma editorial de relatos semanales e historias literarias.{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}WeekStory — Relatos Semanales{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Plataforma editorial de relatos semanales e historias literarias.{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    {% block og_image %}{% endblock %}
+    <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+
+    <!-- Sindicación RSS -->
+    <link rel="alternate" type="application/rss+xml" title="WeekStory RSS" href="{% url 'stories:rss-feed' %}">
 
     <!-- FontAwesome para Iconos Premium -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

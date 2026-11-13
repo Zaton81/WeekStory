@@ -26,12 +26,14 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Django
+# Django & Local Databases / Logs
 *.log
+/logs/
 db.sqlite3
-/media
-/staticfiles
-/.venv
+db.sqlite3-journal
+/media/
+/staticfiles/
+/.venv/
 /local_settings.py
 
 # IDE & Editors
@@ -50,14 +52,17 @@ db.sqlite3
 .env.local
 .env.*.local
 
-# AI Models (Large files)
+# Legacy / Large Model & Archive Files
 /models/
 *.bin
 *.pth
 *.pt
 *.model
+*.onnx
+*.zip
+*.tar.gz
 
-# Test Coverage
+# Test Coverage & Linters
 htmlcov/
 .coverage
 .coverage.*
@@ -67,6 +72,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Docker
 docker-compose.override.yml
