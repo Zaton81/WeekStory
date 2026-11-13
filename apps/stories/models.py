@@ -1,8 +1,11 @@
+import math
 from django.db import models
+from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
-from .validators import validate_image_size_and_dimensions
+from .validators import validate_image_size_and_dimensions, validate_banner_html_code
 
 
 class Category(models.Model):
@@ -64,47 +67,6 @@ class Story(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Actualizado el")
     published_at = models.DateTimeField(null=True, blank=True, verbose_name="Publicado el")
     
-    # Procesamiento por IA
-    extraction_status = models.CharField(
-        max_length=20,
-        choices=[
-            ('pending', _('Pendiente')),
-            ('processing', _('Procesando')),
-            ('completed', _('Completado')),
-            ('failed', _('Fallido')),
-        ],
-        default='pending',
-        verbose_name="Estado de extracción de IA"
-    )
-    extraction_error = models.TextField(blank=True, verbose_name="Error de extracción")
-    
-    # Audio por IA (TTS)
-    audio_file = models.FileField(
-        upload_to='stories/audio/',
-        blank=True,
-        null=True,
-        verbose_name="Archivo de audio"
-    )
-    audio_status = models.CharField(
-        max_length=20,
-        choices=[
-            ('pending', _('Pendiente')),
-            ('processing', _('Procesando')),
-            ('completed', _('Completado')),
-            ('failed', _('Fallido')),
-        ],
-        default='pending',
-        verbose_name="Estado de generación de audio"
-    )
-    audio_error = models.TextField(blank=True, verbose_name="Error de generación de audio")
-    audio_voice = models.CharField(
-        max_length=30,
-        blank=True,
-        default='',
-        verbose_name="Voz del narrador",
-        help_text="Voz TTS utilizada para sintetizar el audio (ef_dora, em_alex)"
-    )
-    
     class Meta:
         verbose_name = "Historia"
         verbose_name_plural = "Historias"
@@ -116,16 +78,23 @@ class Story(models.Model):
     
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse('stories:story-detail', args=[self.pk])
     
     @property
     def word_count(self):
-        """Calcular conteo de palabras"""
-        return len(self.content.split())
-    
+        """Calcular conteo de palabras limpiando etiquetas HTML"""
+        clean_text = strip_tags(self.content or '')
+        return len(clean_text.split())
+
     @property
-    def extraction_complete(self):
-        """Comprobar si se completó la extracción"""
-        return self.extraction_status in ['completed', 'failed']
+    def reading_time_minutes(self):
+        """Tiempo estimado de lectura en minutos (200 palabras por minuto, mínimo 1 min)"""
+        words = self.word_count
+        if words <= 0:
+            return 1
+        return max(1, math.ceil(words / 200))
 
 
 class Comment(models.Model):
@@ -180,7 +149,8 @@ class Banner(models.Model):
     html_code = models.TextField(
         blank=True, 
         verbose_name="Código HTML del Banner", 
-        help_text="Usa esto para inyectar código personalizado (AdSense, iFrames, scripts, etc.) en lugar de usar imagen y enlace"
+        validators=[validate_banner_html_code],
+        help_text="Usa esto para inyectar código HTML seguro (sin <script>, <iframe> ni eventos on*) en lugar de imagen y enlace"
     )
     is_active = models.BooleanField(default=True, verbose_name="Activo")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creado el")
@@ -188,7 +158,9 @@ class Banner(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
         super().clean()
-        if not self.html_code:
+        if self.html_code:
+            validate_banner_html_code(self.html_code)
+        else:
             if not self.image and not self.image_url:
                 raise ValidationError("Debe proporcionar una imagen local, una URL de imagen alternativa o un código HTML del banner.")
             if not self.link_url:
