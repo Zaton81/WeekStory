@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from django_ckeditor_5.fields import CKEditor5Field
-from .validators import validate_image_size_and_dimensions, validate_banner_html_code
+from .validators import validate_image_file, validate_banner_html_code
 
 
 class Category(models.Model):
@@ -57,7 +57,7 @@ class Story(models.Model):
     content = CKEditor5Field(verbose_name="Contenido", config_name='default')
     excerpt = models.TextField(blank=True, help_text="Descripción corta para vista previa", verbose_name="Resumen")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='stories', verbose_name="Categoría")
-    cover_image = models.ImageField(upload_to='stories/covers/', blank=True, null=True, verbose_name="Imagen de portada", validators=[validate_image_size_and_dimensions])
+    cover_image = models.ImageField(upload_to='stories/covers/', blank=True, null=True, verbose_name="Imagen de portada", validators=[validate_image_file])
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name="Estado")
     scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="Publicación programada", help_text="Fecha y hora para publicar automáticamente (solo si el estado es 'Programado')")
@@ -131,7 +131,7 @@ class Banner(models.Model):
     ]
     
     title = models.CharField(max_length=100, verbose_name="Título del Banner")
-    image = models.ImageField(upload_to='banners/', verbose_name="Imagen del Banner (Local)", blank=True, null=True, validators=[validate_image_size_and_dimensions])
+    image = models.ImageField(upload_to='banners/', verbose_name="Imagen del Banner (Local)", blank=True, null=True, validators=[validate_image_file])
     image_url = models.URLField(verbose_name="URL de Imagen (Alternativa)", blank=True, help_text="Usa esto si prefieres una URL externa de imagen en lugar de subir un archivo")
     link_url = models.URLField(verbose_name="Enlace de Destino", blank=True, null=True)
     position = models.CharField(

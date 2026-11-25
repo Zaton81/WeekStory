@@ -2,50 +2,54 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: weekstory
-      POSTGRES_USER: weekstory_user
-      POSTGRES_PASSWORD: weekstory_secure_password
+      POSTGRES_DB: ${DB_NAME:-weekstory}
+      POSTGRES_USER: ${DB_USER:-weekstory_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-weekstory_secure_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U weekstory_user -d weekstory"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-weekstory_user} -d ${DB_NAME:-weekstory}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Django Application
+  # Django Application (Gunicorn, non-root)
   web:
     build: .
+    restart: unless-stopped
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 30 --access-logfile - --error-logfile - weekstory.wsgi:application"
     ports:
       - "8000:8000"
     environment:
-      DEBUG: "True"
-      SECRET_KEY: "your-secret-key-here-change-in-production"
-      DATABASE_URL: postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory
-      ALLOWED_HOSTS: localhost,127.0.0.1,web
+      DEBUG: ${DEBUG:-False}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-in-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://weekstory_user:weekstory_secure_password@db:5432/weekstory}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,web}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
-      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz/"]
       interval: 30s
       timeout: 10s
+      start_period: 40s
       retries: 3
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:latest
+    image: nginx:1.27-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -54,7 +58,8 @@ services:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
 
 volumes:
   postgres_data:

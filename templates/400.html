@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Solicitud incorrecta (400){% endblock %}
+
+{% block content %}
+<section class="glass-card" style="max-width: 640px; margin: 4rem auto; padding: 3rem 2rem; text-align: center;">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem; color: hsl(var(--secondary));">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <p class="story-meta" style="text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.5rem;">Error 400</p>
+    <h1 class="gradient-text" style="font-size: 2.2rem; margin-bottom: 1rem;">Solicitud no válida</h1>
+    <p class="story-meta" style="font-size: 1rem; line-height: 1.6; margin-bottom: 2rem;">
+        No pudimos procesar tu petición. Verifica los datos enviados e inténtalo de nuevo.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{% url 'stories:story-list' %}" class="btn btn-primary">
+            <i class="fa-solid fa-house"></i> Volver al inicio
+        </a>
+    </div>
+</section>
+{% endblock %}

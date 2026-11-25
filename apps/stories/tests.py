@@ -159,16 +159,16 @@ class StoryAccessTests(TestCase):
 
 
 class ImageValidatorTests(TestCase):
-    def _create_test_image(self, width, height):
+    def _create_test_image(self, width, height, filename='test.jpg', fmt='JPEG', content_type='image/jpeg'):
         from PIL import Image
         import io
         from django.core.files.uploadedfile import SimpleUploadedFile
         
         file = io.BytesIO()
         image = Image.new('RGB', (width, height), 'white')
-        image.save(file, 'jpeg')
+        image.save(file, fmt)
         file.seek(0)
-        return SimpleUploadedFile('test.jpg', file.read(), content_type='image/jpeg')
+        return SimpleUploadedFile(filename, file.read(), content_type=content_type)
 
     def test_valid_image_passes(self):
         from apps.stories.validators import validate_image_size_and_dimensions
@@ -199,6 +199,49 @@ class ImageValidatorTests(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             validate_image_size_and_dimensions(image)
         self.assertIn("superan el límite de 4000x4000px", str(ctx.exception))
+
+    def test_validate_image_file_accepts_allowed_extensions(self):
+        from apps.stories.validators import validate_image_file
+
+        for filename, fmt, ctype in [
+            ('cover.jpg', 'JPEG', 'image/jpeg'),
+            ('cover.jpeg', 'JPEG', 'image/jpeg'),
+            ('cover.png', 'PNG', 'image/png'),
+            ('cover.webp', 'WEBP', 'image/webp'),
+        ]:
+            image = self._create_test_image(400, 300, filename=filename, fmt=fmt, content_type=ctype)
+            validate_image_file(image)
+
+    def test_validate_image_file_rejects_oversized_image(self):
+        from apps.stories.validators import validate_image_file
+        from django.core.exceptions import ValidationError
+
+        image = self._create_test_image(200, 200, filename='heavy.jpg')
+        image.size = 6 * 1024 * 1024  # 6 MB > 5 MB
+
+        with self.assertRaises(ValidationError) as ctx:
+            validate_image_file(image)
+        self.assertIn("5.0 MB", str(ctx.exception))
+
+    def test_validate_image_file_rejects_invalid_extensions(self):
+        from apps.stories.validators import validate_image_file
+        from django.core.exceptions import ValidationError
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        for bad_name in ['payload.svg', 'animated.gif', 'script.exe', 'doc.pdf']:
+            bad_file = SimpleUploadedFile(bad_name, b'fake-data', content_type='application/octet-stream')
+            with self.assertRaises(ValidationError) as ctx:
+                validate_image_file(bad_file)
+            self.assertIn("Extensión de archivo no permitida", str(ctx.exception))
+
+    def test_validate_image_file_rejects_corrupt_image(self):
+        from apps.stories.validators import validate_image_file
+        from django.core.exceptions import ValidationError
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        corrupt = SimpleUploadedFile('broken.png', b'not-a-valid-png-stream', content_type='image/png')
+        with self.assertRaises(ValidationError):
+            validate_image_file(corrupt)
 
 
 class SocialPostApprovalTests(TestCase):
@@ -384,15 +427,25 @@ class SecurityAndSeoTests(TestCase):
                 banner.clean()
 
     def test_rss_feed_and_sitemap_xml_respond_with_valid_xml(self):
+        draft_story = Story.objects.create(
+            user=self.staff_user,
+            title="Relato Borrador No Indexado",
+            content="<p>Contenido privado en borrador.</p>",
+            category=self.category,
+            status="draft"
+        )
+
         rss_resp = self.client.get(reverse('stories:rss-feed'))
         self.assertEqual(rss_resp.status_code, 200)
         self.assertIn('xml', rss_resp['Content-Type'])
         self.assertContains(rss_resp, 'Relato de Prueba SEO')
+        self.assertNotContains(rss_resp, draft_story.title)
 
         sitemap_resp = self.client.get('/sitemap.xml')
         self.assertEqual(sitemap_resp.status_code, 200)
         self.assertIn('xml', sitemap_resp['Content-Type'])
         self.assertContains(sitemap_resp, f'/{self.story.id}/')
+        self.assertNotContains(sitemap_resp, f'/{draft_story.id}/')
 
     def test_story_detail_includes_opengraph_meta_tags(self):
         resp = self.client.get(reverse('stories:story-detail', args=[self.story.id]))
@@ -400,5 +453,35 @@ class SecurityAndSeoTests(TestCase):
         self.assertContains(resp, 'property="og:title" content="Relato de Prueba SEO"')
         self.assertContains(resp, 'property="og:type" content="article"')
         self.assertContains(resp, 'name="twitter:card" content="summary_large_image"')
+        self.assertContains(resp, '<link rel="canonical"')
+
+    def test_robots_txt_endpoint(self):
+        resp = self.client.get('/robots.txt')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp['Content-Type'].startswith('text/plain'))
+        self.assertContains(resp, 'User-agent: *')
+        self.assertContains(resp, 'Disallow: /admin/')
+        self.assertContains(resp, 'Sitemap:')
+        self.assertContains(resp, '/sitemap.xml')
+
+    def test_custom_404_page_renders_editorial_template(self):
+        resp = self.client.get('/999999/')
+        self.assertEqual(resp.status_code, 404)
+        self.assertContains(resp, 'Relato no encontrado', status_code=404)
+        self.assertContains(resp, 'Error 404', status_code=404)
+
+    def test_healthz_endpoint_returns_ok(self):
+        resp = self.client.get('/healthz/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {'status': 'ok'})
+
+    def test_healthz_endpoint_returns_503_on_database_error(self):
+        from unittest.mock import patch
+
+        with patch('weekstory.urls.connection.cursor', side_effect=Exception('DB down')):
+            resp = self.client.get('/healthz/')
+        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(resp.json()['status'], 'error')
+
 
 

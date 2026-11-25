@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import importlib.util
 import os
+import sys
 
 try:
     import dj_database_url
@@ -44,6 +45,10 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-development-key')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+
+TESTING = 'test' in sys.argv or 'pytest' in sys.modules
 
 # Application definition
 INSTALLED_APPS = [
@@ -203,8 +208,9 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', 'noreply@weekstory.local')
 
-# Logging Configuration
+# Logging Configuration (12-factor structured console output to stdout/stderr)
 _HAS_JSON_LOGGER = importlib.util.find_spec('pythonjsonlogger') is not None
+LOG_LEVEL = config('LOG_LEVEL', 'INFO')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -229,41 +235,43 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'json' if _HAS_JSON_LOGGER else 'verbose',
         },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'weekstory.log',
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
     },
     'root': {
-        'handlers': ['console', 'file'],
-        'level': config('LOG_LEVEL', 'INFO'),
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
-            'level': config('LOG_LEVEL', 'INFO'),
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
         'apps': {
-            'handlers': ['console', 'file'],
-            'level': config('LOG_LEVEL', 'INFO'),
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
             'propagate': False,
         },
     },
 }
 
-# Create logs directory if it doesn't exist
-LOGS_DIR = BASE_DIR / 'logs'
-LOGS_DIR.mkdir(exist_ok=True)
-
 # Security Settings for Production
 if not DEBUG:
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not TESTING, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    X_FRAME_OPTIONS = 'DENY'
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_SECURITY_POLICY = {
         'default-src': ("'self'",),

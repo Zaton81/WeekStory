@@ -3,7 +3,7 @@
         <!-- Imagen de portada miniatura -->
         {% if story.cover_image %}
             <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb">
-                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}" loading="lazy" decoding="async">
             </a>
         {% else %}
             <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb story-cover-placeholder">

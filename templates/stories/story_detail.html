@@ -176,7 +176,7 @@
                 <a href="{% url 'stories:story-detail' related.id %}" class="related-story-card glass-card">
                     {% if related.cover_image %}
                     <div class="related-story-thumb">
-                        <img src="{{ related.cover_image.url }}" alt="{{ related.title }}">
+                        <img src="{{ related.cover_image.url }}" alt="{{ related.title }}" loading="lazy" decoding="async">
                     </div>
                     {% else %}
                     <div class="related-story-thumb related-story-placeholder">
@@ -232,7 +232,7 @@
             </form>
 
             <!-- Lista de Comentarios -->
-            <div id="comments-list"
+            <div id="comments-list" aria-live="polite"
                 style="display: flex; flex-direction: column; gap: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
                 {% if comments %}
                 {% for comment in comments %}

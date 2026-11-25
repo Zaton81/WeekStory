@@ -1,6 +1,6 @@
 {% load static %}
 {# Partial para feedback y gestión manual síncrona de publicaciones sociales #}
-<div id="post-{{ post.platform }}" class="tab-content {% if is_active or action_message %}active{% endif %}">
+<div id="post-{{ post.platform }}" class="tab-content {% if is_active or action_message %}active{% endif %}" aria-live="polite">
     <div class="post-preview-card">
         <div class="platform-brand-header">
             <div class="platform-name">

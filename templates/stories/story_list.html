@@ -47,9 +47,9 @@
                             {% else %}
                                 <a href="{{ banner_entre_historias.link_url }}" target="_blank" style="width: 100%; display: block;">
                                     {% if banner_entre_historias.image %}
-                                        <img src="{{ banner_entre_historias.image.url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
+                                        <img src="{{ banner_entre_historias.image.url }}" alt="{{ banner_entre_historias.title }}" loading="lazy" decoding="async" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
                                     {% elif banner_entre_historias.image_url %}
-                                        <img src="{{ banner_entre_historias.image_url }}" alt="{{ banner_entre_historias.title }}" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
+                                        <img src="{{ banner_entre_historias.image_url }}" alt="{{ banner_entre_historias.title }}" loading="lazy" decoding="async" style="max-width: 100%; height: auto; border-radius: var(--border-radius-sm); max-height: 100px; object-fit: contain;">
                                     {% endif %}
                                 </a>
                             {% endif %}
@@ -60,7 +60,7 @@
                         <!-- Imagen de portada miniatura -->
                         {% if story.cover_image %}
                             <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb">
-                                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}">
+                                <img src="{{ story.cover_image.url }}" alt="{{ story.title }}" loading="lazy" decoding="async">
                             </a>
                         {% else %}
                             <a href="{% url 'stories:story-detail' story.id %}" class="story-cover-thumb story-cover-placeholder">
@@ -196,9 +196,9 @@
                     {% else %}
                         <a href="{{ banner_lateral.link_url }}" target="_blank">
                             {% if banner_lateral.image %}
-                                <img src="{{ banner_lateral.image.url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                <img src="{{ banner_lateral.image.url }}" alt="{{ banner_lateral.title }}" loading="lazy" decoding="async" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             {% elif banner_lateral.image_url %}
-                                <img src="{{ banner_lateral.image_url }}" alt="{{ banner_lateral.title }}" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                <img src="{{ banner_lateral.image_url }}" alt="{{ banner_lateral.title }}" loading="lazy" decoding="async" style="width: 100%; border-radius: var(--border-radius-sm); border: 1px solid var(--glass-border); transition: var(--transition);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             {% endif %}
                         </a>
                     {% endif %}
