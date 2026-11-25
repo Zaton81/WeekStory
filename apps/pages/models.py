@@ -1,6 +1,7 @@
 from django.db import models
+from django.urls import reverse
 from django_ckeditor_5.fields import CKEditor5Field
-from apps.stories.validators import validate_image_size_and_dimensions
+from apps.stories.validators import validate_image_file
 
 
 class Page(models.Model):
@@ -10,7 +11,7 @@ class Page(models.Model):
     slug = models.SlugField(max_length=200, unique=True, verbose_name="Slug")
     content = CKEditor5Field(verbose_name="Contenido", config_name='default')
     excerpt = models.TextField(blank=True, verbose_name="Resumen corto")
-    cover_image = models.ImageField(upload_to='pages/covers/', blank=True, null=True, verbose_name="Imagen de portada", validators=[validate_image_size_and_dimensions])
+    cover_image = models.ImageField(upload_to='pages/covers/', blank=True, null=True, verbose_name="Imagen de portada", validators=[validate_image_file])
     icon_class = models.CharField(
         max_length=100, blank=True, default='fa-solid fa-file-lines',
         verbose_name="Icono FontAwesome",
@@ -48,3 +49,6 @@ class Page(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse('pages:page-detail', args=[self.slug])

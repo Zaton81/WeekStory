@@ -1,13 +1,25 @@
 """
-Social Media Publishers - Lógica de publicación para cada plataforma.
+Social Media Publishers - Lógica de publicación síncrona para cada plataforma.
 
 Cada publisher soporta un modo simulado: si las credenciales son placeholder
-(contienen 'your-'), el publisher logueará el intento y retornará éxito simulado.
+(contienen 'your-' o están vacías), el publisher registrará el intento y retornará éxito simulado.
+Todas las llamadas HTTP externas usan timeout=10 explícito.
 """
 import logging
 from django.conf import settings
 
+try:
+    import requests
+    TimeoutExceptions = (TimeoutError, requests.Timeout)
+    NetworkExceptions = (OSError, requests.RequestException)
+except ImportError:
+    requests = None
+    TimeoutExceptions = (TimeoutError,)
+    NetworkExceptions = (OSError,)
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_HTTP_TIMEOUT = 10
 
 
 def _is_placeholder(value: str) -> bool:
@@ -32,9 +44,10 @@ def get_publisher(platform: str):
 
 
 class BasePublisher:
-    """Clase base para publishers de redes sociales."""
+    """Clase base para publishers síncronos de redes sociales."""
     
     platform_name = "Base"
+    timeout = DEFAULT_HTTP_TIMEOUT
     
     def publish(self, text: str, image_url: str = None) -> dict:
         raise NotImplementedError
@@ -55,7 +68,7 @@ class BasePublisher:
 
 
 class TwitterPublisher(BasePublisher):
-    """Publisher para Twitter/X usando Tweepy."""
+    """Publisher síncrono para Twitter/X."""
     
     platform_name = "Twitter/X"
     
@@ -76,10 +89,10 @@ class TwitterPublisher(BasePublisher):
                 access_token=access_token,
                 access_token_secret=access_token_secret,
             )
+            if hasattr(client, 'session') and client.session is not None:
+                client.session.timeout = self.timeout
             
-            # Truncar a 280 caracteres para Twitter
             tweet_text = text[:280]
-            
             response = client.create_tweet(text=tweet_text)
             tweet_id = response.data['id']
             
@@ -88,6 +101,14 @@ class TwitterPublisher(BasePublisher):
                 'post_id': str(tweet_id),
                 'post_url': f'https://twitter.com/i/web/status/{tweet_id}',
                 'error': '',
+            }
+        except TimeoutExceptions as e:
+            logger.error(f"Timeout publicando en Twitter ({self.timeout}s): {e}")
+            return {
+                'success': False,
+                'post_id': '',
+                'post_url': '',
+                'error': f'Tiempo de espera agotado ({self.timeout}s) al conectar con Twitter/X.',
             }
         except Exception as e:
             logger.error(f"Error publicando en Twitter: {e}")
@@ -100,7 +121,7 @@ class TwitterPublisher(BasePublisher):
 
 
 class FacebookPublisher(BasePublisher):
-    """Publisher para Facebook usando facebook-sdk."""
+    """Publisher síncrono para Facebook con timeout=10."""
     
     platform_name = "Facebook"
     
@@ -112,7 +133,7 @@ class FacebookPublisher(BasePublisher):
         
         try:
             import facebook
-            graph = facebook.GraphAPI(access_token=access_token)
+            graph = facebook.GraphAPI(access_token=access_token, timeout=self.timeout)
             
             response = graph.put_object(
                 parent_object='me',
@@ -127,6 +148,14 @@ class FacebookPublisher(BasePublisher):
                 'post_url': f'https://www.facebook.com/{post_id}' if post_id else '',
                 'error': '',
             }
+        except TimeoutExceptions as e:
+            logger.error(f"Timeout publicando en Facebook ({self.timeout}s): {e}")
+            return {
+                'success': False,
+                'post_id': '',
+                'post_url': '',
+                'error': f'Tiempo de espera agotado ({self.timeout}s) al conectar con Facebook.',
+            }
         except Exception as e:
             logger.error(f"Error publicando en Facebook: {e}")
             return {
@@ -138,7 +167,7 @@ class FacebookPublisher(BasePublisher):
 
 
 class LinkedInPublisher(BasePublisher):
-    """Publisher para LinkedIn usando la API REST."""
+    """Publisher síncrono para LinkedIn con timeout=10."""
     
     platform_name = "LinkedIn"
     
@@ -150,14 +179,16 @@ class LinkedInPublisher(BasePublisher):
             return self._simulate(text)
         
         try:
-            import requests as req
-            
-            # LinkedIn requiere un access_token OAuth2 vigente.
-            # Esta implementación es un placeholder para cuando el flujo OAuth
-            # esté completamente implementado.
             logger.warning("LinkedIn OAuth2 flow not fully implemented. Simulating publish.")
             return self._simulate(text)
-            
+        except NetworkExceptions as e:
+            logger.error(f"Error de red publicando en LinkedIn: {e}")
+            return {
+                'success': False,
+                'post_id': '',
+                'post_url': '',
+                'error': str(e),
+            }
         except Exception as e:
             logger.error(f"Error publicando en LinkedIn: {e}")
             return {
@@ -169,7 +200,7 @@ class LinkedInPublisher(BasePublisher):
 
 
 class InstagramPublisher(BasePublisher):
-    """Publisher para Instagram usando la Graph API de Meta."""
+    """Publisher síncrono para Instagram con timeout=10."""
     
     platform_name = "Instagram"
     
@@ -181,18 +212,20 @@ class InstagramPublisher(BasePublisher):
             return self._simulate(text)
         
         try:
-            # Instagram requiere una imagen para publicar.
-            # Si no hay imagen, simulamos la publicación.
             if not image_url:
                 logger.warning("Instagram requiere una imagen para publicar. Simulando publicación.")
                 return self._simulate(text)
             
-            # La API de Instagram a través de la Graph API de Meta requiere
-            # una cuenta de negocio y permisos aprobados. 
-            # Simulamos hasta que el flujo OAuth esté completamente implementado.
             logger.warning("Instagram Graph API flow not fully implemented. Simulating publish.")
             return self._simulate(text)
-            
+        except NetworkExceptions as e:
+            logger.error(f"Error de red publicando en Instagram: {e}")
+            return {
+                'success': False,
+                'post_id': '',
+                'post_url': '',
+                'error': str(e),
+            }
         except Exception as e:
             logger.error(f"Error publicando en Instagram: {e}")
             return {

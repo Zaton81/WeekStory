@@ -1,334 +1,121 @@
-# WeekStory - Quick Start Guide
+# WeekStory — Guía de Configuración, Desarrollo y Operación en Producción (Zero-AI)
 
-## 🎯 What You Have
-
-A **complete Django + AI project scaffold** for WeekStory:
-- ✅ Full Docker environment (Django, PostgreSQL, Redis, Celery, Nginx)
-- ✅ 4 Django apps (stories, extractions, social_posts, ai_models)
-- ✅ REST API endpoints ready to use
-- ✅ Celery async tasks configured
-- ✅ Agent + instructions for automated development
+## 1. Requisitos
+- **Docker** y **Docker Compose** (o Python 3.12+ para ejecución local con SQLite).
+- Consumo ligero de recursos (< 512 MB de RAM en total para `db`, `web` y `nginx`).
 
 ---
 
-## 🚀 Getting Started (5 minutes)
-
-### Step 1: Prepare Environment
+## 2. Puesta en Marcha Rápida con Docker
 
 ```bash
-cd C:\Users\zaton\Desktop\Escritorio\proyectos\WeekStory
+# 1. Crear archivo .env a partir de la plantilla
+cp .env.example .env
 
-# Copy environment file (and update API keys later)
-copy .env.example .env
+# 2. Construir e iniciar los contenedores (db, web con Gunicorn no-root y nginx)
+docker compose up -d --build
+
+# 3. (Opcional, solo desarrollo/staging) Cargar relatos de prueba
+docker compose exec web python manage.py seed_stories
 ```
 
-### Step 2: Build & Start
-
-```bash
-# Build Docker images (first time only, ~3-5 min)
-docker-compose build
-
-# Start all services
-docker-compose up -d
-
-# Watch logs
-docker-compose logs -f web
-```
-
-### Step 3: Initialize Database
-
-```bash
-# Run migrations
-docker-compose exec web python manage.py migrate
-
-# Create superuser (for admin panel)
-docker-compose exec web python manage.py createsuperuser
-
-# Check health
-curl http://localhost:8000/health/
-```
-
-### Step 4: Access Services
-
-| Service | URL |
-|---------|-----|
-| Django Admin | http://localhost/admin |
-| API | http://localhost:8000/api/v1 |
-| Health Check | http://localhost:8000/health/ |
+El contenedor `web` ejecuta automáticamente `migrate --noinput` y `collectstatic --noinput` antes de iniciar Gunicorn (`--workers 3 --threads 2 --timeout 30`).
 
 ---
 
-## 📝 First Test: Upload a Story
-
-### 1. Get Auth Token
+## 3. Desarrollo y Pruebas Locales
 
 ```bash
-# Create a token for your superuser
-docker-compose exec web python manage.py drf_create_token admin
+# Verificar que no existan migraciones pendientes
+python manage.py makemigrations --check --dry-run
 
-# Or via API:
-curl -X POST http://localhost:8000/api-token-auth/ \
-  -d "username=admin&password=yourpassword"
+# Comprobar la configuración de Django
+python manage.py check
 
-# Save the token (e.g., "abc123def456")
-```
-
-### 2. Upload a Story
-
-```bash
-# Use your token
-TOKEN="YOUR_TOKEN_HERE"
-
-curl -X POST http://localhost:8000/api/v1/stories/ \
-  -H "Authorization: Token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My First Weekly Story",
-    "content": "This is a longer story that demonstrates the WeekStory platform. Once upon a time, in a land far away, there was a kingdom where stories were treasured above all else. Every week, people would gather to share their tales. This story is about the power of imagination and how it shapes our world.",
-    "excerpt": "A tale about imagination and storytelling"
-  }'
-
-# Response: {"id": 1, "status": "processing"}
-```
-
-### 3. Check Extraction Status
-
-```bash
-# Poll the extraction status
-curl http://localhost:8000/api/v1/stories/1/extraction-status/ \
-  -H "Authorization: Token $TOKEN"
-
-# Response:
-# {
-#   "id": 1,
-#   "extraction_status": "completed",
-#   "extraction_error": "",
-#   "extraction_complete": true
-# }
-```
-
-### 4. View Generated Social Posts
-
-```bash
-# Check what posts were generated
-docker-compose exec web python manage.py shell
-
-# In the shell:
-from apps.extractions.models import TextExtraction
-from apps.social_posts.models import SocialPost
-
-extraction = TextExtraction.objects.first()
-posts = SocialPost.objects.filter(extraction=extraction)
-
-for post in posts:
-    print(f"{post.platform}: {post.generated_text}\n")
+# Ejecutar toda la batería de tests (stories, social_posts, pages, legal, social_links)
+python manage.py test
 ```
 
 ---
 
-## 🛠️ Development Workflow
+## 4. Operación en Producción
 
-### Working on Stories (User uploads)
+### 4.1. Variables de Entorno Obligatorias (`.env`)
+Antes de exponer la plataforma en producción, revisa y ajusta `.env` basándote en `.env.example`:
+
+- `DEBUG=False`
+- `SECRET_KEY`: genera una clave aleatoria segura de al menos 50 caracteres:
+  ```bash
+  python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+  ```
+- `ALLOWED_HOSTS`: dominios reales separados por comas (ej. `weekstory.es,www.weekstory.es`).
+- `CSRF_TRUSTED_ORIGINS`: orígenes HTTPS completos (ej. `https://weekstory.es,https://www.weekstory.es`).
+- `SECURE_SSL_REDIRECT=True` (detrás de un proxy TLS que envíe `X-Forwarded-Proto: https`).
+- `DATABASE_URL` y credenciales de PostgreSQL (`DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+
+### 4.2. Despliegue y Mantenimiento
 
 ```bash
-# Edit models
-nano apps/stories/models.py
+# Construir e iniciar en segundo plano
+docker compose up -d --build
 
-# Edit views & serializers
-nano apps/stories/views.py
-nano apps/stories/serializers.py
+# Aplicar migraciones manualmente tras una actualización
+docker compose exec web python manage.py migrate --noinput
 
-# Reload Django (auto-reload in development)
-docker-compose restart web
+# Recolectar archivos estáticos
+docker compose exec web python manage.py collectstatic --noinput
+
+# Crear superusuario editorial en producción
+docker compose exec web python manage.py createsuperuser
+
+# Auditoría de seguridad de Django para despliegue
+docker compose exec web python manage.py check --deploy
 ```
 
-### Working on AI Extraction
+### 4.3. Monitoreo y Logs (`/healthz/`)
+- **Endpoint de salud:** `GET /healthz/` verifica la conectividad real contra la base de datos y responde HTTP `200` (`{"status": "ok"}`) o HTTP `503` si la base de datos no está disponible.
+- **Healthchecks automáticos:** configurados tanto en `Dockerfile` como en `docker-compose.yml` con política `restart: unless-stopped`.
+- **Logs estructurados:** Django y Gunicorn emiten todos los eventos hacia `stdout`/`stderr`:
+  ```bash
+  docker compose logs -f web nginx
+  ```
 
+### 4.4. Copias de Seguridad (Backups) y Restauración
+
+#### Base de datos PostgreSQL
 ```bash
-# Implement actual AI logic here
-nano apps/extractions/services.py  # (Create this file)
-nano apps/extractions/tasks.py     # (Modify extraction logic)
+# Crear copia de seguridad comprimida
+mkdir -p backups
+docker compose exec -T db pg_dump -U "${DB_USER:-weekstory_user}" "${DB_NAME:-weekstory}" | gzip > "backups/weekstory_db_$(date +%Y%m%d_%H%M%S).sql.gz"
+
+# Restaurar una copia de seguridad
+gunzip -c backups/weekstory_db_YYYYMMDD_HHMMSS.sql.gz | docker compose exec -T db psql -U "${DB_USER:-weekstory_user}" "${DB_NAME:-weekstory}"
 ```
 
-### Monitor Celery Tasks
-
+#### Carpeta de archivos subidos (`media/`)
 ```bash
-# View active tasks
-docker-compose exec celery_worker celery -A weekstory inspect active
+# Respaldar el volumen de media (portadas de historias, banners y páginas)
+docker run --rm \
+  -v weekstory_media_volume:/data:ro \
+  -v "$(pwd)/backups:/backup" \
+  alpine tar czf "/backup/weekstory_media_$(date +%Y%m%d_%H%M%S).tar.gz" -C /data .
 
-# View task history
-docker-compose logs celery_worker
-
-# View scheduled tasks
-docker-compose exec celery_beat celery -A weekstory inspect scheduled
+# Restaurar el volumen de media
+docker run --rm \
+  -v weekstory_media_volume:/data \
+  -v "$(pwd)/backups:/backup:ro" \
+  alpine tar xzf /backup/weekstory_media_YYYYMMDD_HHMMSS.tar.gz -C /data
 ```
 
 ---
 
-## 🤖 Using the AI Agent
+## 5. Arquitectura de Componentes
 
-The **WeekStory Developer agent** is pre-configured. Use it by:
-
-### 1. Via Agent Selector
-- Press `@` in chat
-- Select **"WeekStory Developer"**
-- Describe what you need
-
-### 2. Examples
-
-```
-@WeekStory Developer: Create a new API endpoint for publishing scheduled stories
-
-@WeekStory Developer: Implement BERT NER extraction for character names and locations
-
-@WeekStory Developer: Add Twitter API authentication and posting logic
-```
-
-### 3. Prompts
-
-Type `/` to see available prompts:
-- `/generate-django-endpoint` — Scaffold new REST endpoints
-- More coming as you add prompts...
-
----
-
-## 🐛 Troubleshooting
-
-### Django won't start
-
-```bash
-# Check for migration errors
-docker-compose logs web
-
-# Force rebuild
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-### Celery not processing tasks
-
-```bash
-# Check Redis
-docker-compose exec redis redis-cli ping
-# Should return: PONG
-
-# Check Celery worker
-docker-compose logs celery_worker
-
-# Restart worker
-docker-compose restart celery_worker
-```
-
-### Models not loading
-
-```bash
-# Check model cache directory
-docker-compose exec web ls -la /app/models/
-
-# Pre-download models
-docker-compose exec web python -c "
-from transformers import pipeline
-pipeline('ner', model='dslim/bert-base-multilingual-cased-ner')
-"
-```
-
-### Port already in use
-
-```bash
-# Kill process on port 8000
-lsof -ti:8000 | xargs kill -9
-
-# Or change port in docker-compose.yml
-# ports: "9000:8000" instead of "8000:8000"
-```
-
----
-
-## 📋 Next Steps (What to Build)
-
-### 1. **Implement AI Text Extraction** (Currently placeholder)
-
-File: `apps/extractions/services.py`
-
-```python
-# TODO: Implement actual BERT NER
-def extract_entities(text):
-    # Use transformers library
-    # Return: {"characters": [...], "locations": [...], "confidence": 0.85}
-    pass
-```
-
-### 2. **Connect Social Media APIs** (Currently placeholder)
-
-File: `apps/social_posts/services.py`
-
-```python
-# TODO: Implement Twitter/X, LinkedIn, Instagram, Facebook posting
-def post_to_twitter(text, auth_token):
-    # Use tweepy library
-    # Return: {"status": "success", "post_id": "xyz"}
-    pass
-```
-
-### 3. **Build React/Vue Frontend**
-
-Create separate `frontend/` folder or use Next.js:
-- Story upload UI
-- Real-time extraction status
-- Post preview & editing
-- Social account connections
-- Analytics dashboard
-
-### 4. **Add Admin Dashboard**
-
-Django admin customization:
-- Story moderation
-- Extraction logs
-- Social posting analytics
-- User management
-
-### 5. **Deploy to Production**
-
-- Update `.env` with production values
-- Configure HTTPS + SSL
-- Set up external PostgreSQL & Redis
-- Deploy on AWS/GCP/DigitalOcean
-- Configure CI/CD pipeline
-
----
-
-## 📚 Key Files Reference
-
-| File | Purpose |
-|------|---------|
-| `weekstory/settings.py` | Django configuration |
-| `docker-compose.yml` | Service orchestration |
-| `.env.example` | Environment variables |
-| `apps/stories/models.py` | Story data structure |
-| `apps/extractions/tasks.py` | AI extraction logic |
-| `apps/social_posts/models.py` | Social post management |
-
----
-
-## 💡 Tips
-
-1. **Always use the agent**: `@WeekStory Developer` for fastest development
-2. **Check Docker logs**: `docker-compose logs [service]` for debugging
-3. **Test incrementally**: Write tests as you add features
-4. **Use `.env.example`**: Keep it updated as you add new configs
-5. **Backup your DB**: `docker-compose exec db pg_dump -U weekstory_user weekstory > backup.sql`
-
----
-
-## 🎓 Learning Resources
-
-- Django: https://docs.djangoproject.com/
-- DRF: https://www.django-rest-framework.org/
-- Celery: https://docs.celeryproject.io/
-- Transformers: https://huggingface.co/docs/transformers/
-- Docker: https://docs.docker.com/
-
----
-
-**Happy coding! 🚀**
+| Módulo | Descripción |
+| :--- | :--- |
+| `apps/stories` | Relatos, categorías, comentarios con *honeypot* y *rate-limit* por IP, banners sanitizados, validador de imágenes ($\le 5\text{ MB}$, `.jpg`/`.jpeg`/`.png`/`.webp`), RSS (`/feed/rss/`) y Sitemap (`/sitemap.xml`). |
+| `apps/social_posts` | Generación de borradores base a partir del relato, edición inline con HTMX y publicación síncrona con `timeout=10`. |
+| `apps/pages` y `apps/legal` | Páginas personales con portada validada y textos legales/políticas. |
+| `apps/social_links` | Enlaces globales a perfiles sociales del sitio inyectados mediante context processor. |
+| `static/js/main.js` | Reproductor de voz nativo (`window.speechSynthesis`) sincronizado por párrafos, selector tipográfico (`A-`, `A`, `A+`) y contador de caracteres en vivo. |
+| `weekstory/urls.py` | Endpoints técnicos de producción: `/healthz/`, `/robots.txt` y `/sitemap.xml`. |

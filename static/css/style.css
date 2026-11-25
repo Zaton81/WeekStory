@@ -1274,3 +1274,43 @@ footer {
     border-color: rgba(167, 139, 250, 0.3);
     box-shadow: 0 4px 12px rgba(167, 139, 250, 0.2);
 }
+
+/* ============================================================
+   Sincronización Audio-Texto (Web Speech API) y Tipografía
+   ============================================================ */
+.reading-active {
+    background: rgba(56, 189, 248, 0.12);
+    border-left: 3px solid #38bdf8;
+    padding-left: 0.75rem;
+    border-radius: 6px;
+    transition: background 0.25s ease, padding-left 0.2s ease;
+}
+
+.font-size-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 0.2rem;
+}
+
+.font-size-btn {
+    background: transparent;
+    border: none;
+    color: hsl(var(--text-muted));
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: var(--transition);
+}
+
+.font-size-btn:hover,
+.font-size-btn.active {
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+}

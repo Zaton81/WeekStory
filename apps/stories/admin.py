@@ -11,35 +11,11 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Story)
 class StoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'user', 'status', 'scheduled_at', 'extraction_status', 'created_at')
-    list_filter = ('status', 'category', 'extraction_status', 'created_at')
+    list_display = ('title', 'category', 'user', 'status', 'scheduled_at', 'created_at')
+    list_filter = ('status', 'category', 'created_at')
     search_fields = ('title', 'content', 'excerpt')
     raw_id_fields = ('user',)
     date_hierarchy = 'created_at'
-    readonly_fields = ('extraction_status', 'extraction_error')
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        
-        # Generar audios y extracciones automáticamente al guardar desde el admin
-        # Si es una actualización (change=True) y el contenido ha cambiado, reiniciamos el estado
-        if change and 'content' in form.changed_data:
-            obj.extraction_status = 'pending'
-            obj.audio_status = 'pending'
-            obj.save(update_fields=['extraction_status', 'audio_status'])
-
-        if not change or 'content' in form.changed_data:
-            try:
-                from apps.extractions.tasks import extract_story_text_task
-                extract_story_text_task.delay(obj.id)
-            except Exception:
-                pass
-            
-            try:
-                from apps.stories.tasks import generate_story_audio_task
-                generate_story_audio_task.delay(obj.id)
-            except Exception:
-                pass
 
 
 @admin.register(Comment)

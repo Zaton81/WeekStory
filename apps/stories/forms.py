@@ -66,7 +66,7 @@ class StoryForm(forms.ModelForm):
     def clean_content(self):
         content = self.cleaned_data.get('content')
         if not content or len(content.strip()) < 50:
-            raise forms.ValidationError("El contenido de la historia debe tener al menos 50 caracteres para permitir una extracción de texto adecuada.")
+            raise forms.ValidationError("El contenido de la historia debe tener al menos 50 caracteres.")
         return content
 
     def clean(self):
@@ -100,7 +100,18 @@ class StoryForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
-    """Formulario para escribir un comentario"""
+    """Formulario para escribir un comentario con campo honeypot antispam"""
+    
+    website_url = forms.CharField(
+        required=False,
+        label="Sitio web (dejar en blanco)",
+        widget=forms.TextInput(attrs={
+            'style': 'display:none !important; position:absolute; left:-9999px;',
+            'tabindex': '-1',
+            'autocomplete': 'off',
+            'aria-hidden': 'true',
+        })
+    )
     
     class Meta:
         model = Comment
@@ -123,3 +134,9 @@ class CommentForm(forms.ModelForm):
             'author_name': 'Tu Nombre',
             'content': 'Comentario',
         }
+
+    def clean_website_url(self):
+        honeypot = self.cleaned_data.get('website_url', '')
+        if honeypot:
+            raise forms.ValidationError("Detección antispam activada.")
+        return honeypot

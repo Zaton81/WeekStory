@@ -2,14 +2,28 @@
 Stories Views
 """
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponse
+from django.urls import reverse_lazy, reverse
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
 from .models import Story, Comment, Category
 from .forms import StoryForm, CommentForm
+
+
+def _ensure_manual_social_posts(story, request=None, overwrite=False):
+    """Ensure manual draft SocialPost objects exist for each platform."""
+    from apps.social_posts.models import SocialPost
+    canonical_url = ""
+    if request is not None:
+        canonical_url = request.build_absolute_uri(
+            reverse('stories:story-detail', args=[story.pk])
+        )
+    return SocialPost.initialize_for_story(
+        story, canonical_url=canonical_url, overwrite=overwrite
+    )
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -43,7 +57,7 @@ class StoryListView(ListView):
                 Q(excerpt__icontains=search_query)
             )
 
-        return queryset.select_related('category', 'user')
+        return queryset.select_related('category', 'user').prefetch_related('comments', 'social_posts')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -62,7 +76,7 @@ class StoryListView(ListView):
         return context
 
     def get_template_names(self):
-        if self.request.headers.get('HX-Request'):
+        if self.request.headers.get('HX-Request') == 'true':
             return ['stories/story_list_partial.html']
         return ['stories/story_list.html']
 
@@ -74,8 +88,8 @@ class StoryDetailView(DetailView):
 
     def get_queryset(self):
         if self.request.user.is_authenticated and self.request.user.is_staff:
-            return Story.objects.all()
-        return Story.objects.filter(status='published')
+            return Story.objects.select_related('category', 'user').prefetch_related('comments', 'social_posts')
+        return Story.objects.filter(status='published').select_related('category', 'user').prefetch_related('comments')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -83,6 +97,8 @@ class StoryDetailView(DetailView):
         # Comments: staff sees all, public sees only approved
         if self.request.user.is_authenticated and self.request.user.is_staff:
             context['comments'] = self.object.comments.all()
+            _ensure_manual_social_posts(self.object, request=self.request)
+            context['social_posts'] = self.object.social_posts.all()
         else:
             context['comments'] = self.object.comments.filter(is_approved=True)
         
@@ -98,12 +114,12 @@ class StoryDetailView(DetailView):
         related = Story.objects.filter(status='published').exclude(pk=story.pk).select_related('category', 'user')
         
         if story.category:
-            same_category = related.filter(category=story.category)[:3]
-            if same_category.count() < 3:
-                other = related.exclude(category=story.category)[:3 - same_category.count()]
-                context['related_stories'] = list(same_category) + list(other)
+            same_category = list(related.filter(category=story.category)[:3])
+            if len(same_category) < 3:
+                other = list(related.exclude(category=story.category)[:3 - len(same_category)])
+                context['related_stories'] = same_category + other
             else:
-                context['related_stories'] = list(same_category)
+                context['related_stories'] = same_category
         else:
             context['related_stories'] = list(related[:3])
 
@@ -124,16 +140,7 @@ class StoryCreateView(StaffRequiredMixin, CreateView):
             form.instance.published_at = timezone.now()
         
         response = super().form_valid(form)
-        try:
-            from apps.extractions.tasks import extract_story_text_task
-            extract_story_text_task.delay(self.object.id)
-        except Exception:
-            pass
-        try:
-            from apps.stories.tasks import generate_story_audio_task
-            generate_story_audio_task.delay(self.object.id)
-        except Exception:
-            pass
+        _ensure_manual_social_posts(self.object, request=self.request)
         return response
 
 
@@ -151,21 +158,7 @@ class StoryUpdateView(StaffRequiredMixin, UpdateView):
         if form.instance.status == 'published' and not form.instance.published_at:
             form.instance.published_at = timezone.now()
             
-        form.instance.audio_status = 'pending'
-        form.instance.audio_error = ''
-        
-        response = super().form_valid(form)
-        try:
-            from apps.extractions.tasks import extract_story_text_task
-            extract_story_text_task.delay(self.object.id)
-        except Exception:
-            pass
-        try:
-            from apps.stories.tasks import generate_story_audio_task
-            generate_story_audio_task.delay(self.object.id)
-        except Exception:
-            pass
-        return response
+        return super().form_valid(form)
 
 
 class StoryDeleteView(StaffRequiredMixin, DeleteView):
@@ -185,15 +178,22 @@ def _get_client_ip(request):
     return request.META.get('REMOTE_ADDR')
 
 
+@require_http_methods(['GET', 'POST'])
 def add_comment(request, pk):
-    """Add a comment to a story (anyone can post, moderated)"""
+    """Add a comment to a story with honeypot and IP rate-limit protection (max 3 per 5 min)."""
     if request.user.is_authenticated and request.user.is_staff:
         story = get_object_or_404(Story, pk=pk)
     else:
         story = get_object_or_404(Story, pk=pk, status='published')
         
     if request.method == 'POST':
-        # Rate limiting: max 2 comments per IP per 5 minutes
+        # Honeypot check: if filled by a bot, reject submission
+        if request.POST.get('website_url', '').strip():
+            if request.headers.get('HX-Request') == 'true':
+                return HttpResponse("Envío bloqueado por protección antispam.", status=400)
+            return redirect('stories:story-detail', pk=pk)
+
+        # Rate limiting: max 3 comments per IP per 5 minutes
         client_ip = _get_client_ip(request)
         five_min_ago = timezone.now() - timezone.timedelta(minutes=5)
         recent_comments = Comment.objects.filter(
@@ -201,8 +201,8 @@ def add_comment(request, pk):
             created_at__gte=five_min_ago
         ).count()
         
-        if recent_comments >= 2:
-            if request.headers.get('HX-Request'):
+        if recent_comments >= 3:
+            if request.headers.get('HX-Request') == 'true':
                 return HttpResponse(
                     '<div class="alert-inline" style="color: hsl(var(--danger)); '
                     'padding: 1rem; border: 1px solid hsl(var(--danger)); '
@@ -225,7 +225,7 @@ def add_comment(request, pk):
                 comment.is_approved = True
             comment.save()
             
-            if request.headers.get('HX-Request'):
+            if request.headers.get('HX-Request') == 'true':
                 return render(request, 'stories/comment_partial.html', {
                     'comment': comment,
                     'is_first': story.comments.filter(is_approved=True).count() == 1 and comment.is_approved,
@@ -235,30 +235,8 @@ def add_comment(request, pk):
     return redirect('stories:story-detail', pk=pk)
 
 
-def story_extraction_status(request, pk):
-    if not (request.user.is_authenticated and request.user.is_staff):
-        if request.headers.get('HX-Request'):
-            return HttpResponse("No autorizado", status=401)
-        return JsonResponse({'error': 'No autorizado'}, status=401)
-    try:
-        story = Story.objects.get(pk=pk)
-        # If the request comes from HTMX, we return an HTML partial instead of JSON
-        if request.headers.get('HX-Request'):
-            return render(request, 'stories/story_extraction_partial.html', {'story': story})
-        return JsonResponse({
-            'id': story.id,
-            'extraction_status': story.extraction_status,
-            'extraction_error': story.extraction_error,
-            'extraction_complete': story.extraction_complete,
-        })
-    except Story.DoesNotExist:
-        if request.headers.get('HX-Request'):
-            return HttpResponse("No encontrado", status=404)
-        return JsonResponse({'error': 'No encontrado'}, status=404)
-
-
 def search_stories(request):
-    """Search endpoint for HTMX live search (optional enhancement)"""
+    """Search endpoint for HTMX live search"""
     query = request.GET.get('q', '').strip()
     if not query or len(query) < 2:
         return HttpResponse('')
@@ -267,7 +245,7 @@ def search_stories(request):
         status='published'
     ).filter(
         Q(title__icontains=query) | Q(excerpt__icontains=query)
-    )[:5]
+    ).select_related('category')[:5]
     
     return render(request, 'stories/search_results_partial.html', {
         'results': stories,
@@ -275,43 +253,56 @@ def search_stories(request):
     })
 
 
+@require_POST
 def publish_social_post(request, post_id):
-    """Mark a social media post as published (staff only, HTMX).
-    
-    The actual publication happens client-side: the browser opens the native
-    compose window of the social network with the text pre-loaded.
-    This view only marks the post as 'published' in the database.
-    """
+    """Publish a social media post synchronously via publishers.py (staff only, HTMX)."""
     if not (request.user.is_authenticated and request.user.is_staff):
         return HttpResponse("No autorizado", status=401)
     
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-    
     from apps.social_posts.models import SocialPost
-    post = get_object_or_404(SocialPost, id=post_id)
+    from apps.social_posts.publishers import get_publisher
+    post = get_object_or_404(SocialPost.objects.select_related('story'), id=post_id)
     
-    # Mark as published directly (the user publishes via the native social window)
-    post.status = 'published'
-    post.published_at = timezone.now()
-    post.save(update_fields=['status', 'published_at'])
+    text_to_publish = post.user_edited_text if post.user_edited_text else post.generated_text
+    full_text = f"{text_to_publish}\n\n{post.hashtags}" if post.hashtags else text_to_publish
+    image_url = post.story.cover_image.url if post.story.cover_image else None
+
+    publisher = get_publisher(post.platform)
+    result = publisher.publish(text=full_text, image_url=image_url)
+
+    if result.get('success'):
+        post.status = 'published'
+        post.published_at = timezone.now()
+        post.published_id = result.get('post_id', '')
+        post.published_url = result.get('post_url', '')
+        post.error_message = ''
+        post.save(update_fields=['status', 'published_at', 'published_id', 'published_url', 'error_message', 'updated_at'])
+        action_message = f'Publicado en {post.get_platform_display()}.'
+        action_type = 'saved'
+    else:
+        post.status = 'failed'
+        post.error_message = result.get('error', 'Error desconocido')
+        post.save(update_fields=['status', 'error_message', 'updated_at'])
+        action_message = f'Error al publicar en {post.get_platform_display()}.'
+        action_type = 'error'
     
-    if request.headers.get('HX-Request'):
+    if request.headers.get('HX-Request') == 'true':
         return render(request, 'stories/social_post_action_partial.html', {
             'post': post,
-            'action_message': f'Marcado como publicado en {post.get_platform_display()}.',
-            'action_type': 'saved',
+            'action_message': action_message,
+            'action_type': action_type,
         })
-    return redirect('stories:story-detail', pk=post.extraction.story.id)
+    return redirect('stories:story-detail', pk=post.story_id)
 
 
+@require_http_methods(['GET', 'POST'])
 def edit_social_post(request, post_id):
-    """Edit a social media post's text (staff only, HTMX)."""
+    """Edit a social media post's text manually (staff only, HTMX)."""
     if not (request.user.is_authenticated and request.user.is_staff):
         return HttpResponse("No autorizado", status=401)
     
     from apps.social_posts.models import SocialPost
-    post = get_object_or_404(SocialPost, id=post_id)
+    post = get_object_or_404(SocialPost.objects.select_related('story'), id=post_id)
     
     if request.method == 'POST':
         edited_text = request.POST.get('edited_text', '').strip()
@@ -319,164 +310,76 @@ def edit_social_post(request, post_id):
         
         if edited_text:
             post.user_edited_text = edited_text
-        if edited_hashtags:
-            post.hashtags = edited_hashtags
+        post.hashtags = edited_hashtags
         post.save(update_fields=['user_edited_text', 'hashtags', 'updated_at'])
         
-        if request.headers.get('HX-Request'):
+        if request.headers.get('HX-Request') == 'true':
             return render(request, 'stories/social_post_action_partial.html', {
                 'post': post,
                 'action_message': 'Borrador guardado correctamente.',
                 'action_type': 'saved',
             })
-        return redirect('stories:story-detail', pk=post.extraction.story.id)
+        return redirect('stories:story-detail', pk=post.story_id)
     
     # GET: render edit form
-    if request.headers.get('HX-Request'):
+    if request.headers.get('HX-Request') == 'true':
         return render(request, 'stories/social_post_edit_partial.html', {
             'post': post,
         })
-    return redirect('stories:story-detail', pk=post.extraction.story.id)
+    return redirect('stories:story-detail', pk=post.story_id)
 
 
-def regenerate_social_post(request, post_id):
-    """Regenerate a social media post using AI (staff only, HTMX)."""
-    if not (request.user.is_authenticated and request.user.is_staff):
-        return HttpResponse("No autorizado", status=401)
-    
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-    
-    from apps.social_posts.models import SocialPost
-    from apps.extractions.ai_service import OllamaService
-    
-    post = get_object_or_404(
-        SocialPost.objects.select_related('extraction', 'extraction__story', 'extraction__story__category'),
-        id=post_id
-    )
-    
-    ai = OllamaService()
-    
-    category_name = ""
-    if post.extraction.story.category:
-        category_name = post.extraction.story.category.name
-    
-    posts_data = ai.generate_social_posts(
-        title=post.extraction.story.title,
-        summary=post.extraction.extracted_text,
-        category=category_name,
-    )
-    
-    if post.platform in posts_data:
-        platform_data = posts_data[post.platform]
-        post.generated_text = platform_data['text']
-        post.hashtags = platform_data['hashtags']
-        post.user_edited_text = ''
-        post.status = 'draft'
-        post.save(update_fields=['generated_text', 'hashtags', 'user_edited_text', 'status', 'updated_at'])
-    
-    if request.headers.get('HX-Request'):
-        return render(request, 'stories/social_post_action_partial.html', {
-            'post': post,
-            'action_message': f'Post de {post.get_platform_display()} regenerado con IA.',
-            'action_type': 'regenerated',
-        })
-    return redirect('stories:story-detail', pk=post.extraction.story.id)
-
-
+@require_http_methods(['GET'])
 def social_post_status(request, post_id):
-    """Get the current status of a social post (staff only, HTMX polling)."""
+    """Get the current status of a social post (staff only, HTMX)."""
     if not (request.user.is_authenticated and request.user.is_staff):
         return HttpResponse("No autorizado", status=401)
     
     from apps.social_posts.models import SocialPost
-    post = get_object_or_404(SocialPost, id=post_id)
+    post = get_object_or_404(SocialPost.objects.select_related('story'), id=post_id)
     
     return render(request, 'stories/social_post_action_partial.html', {
         'post': post,
     })
 
 
+@require_POST
 def approve_social_post(request, post_id):
     """Approve a social media post (staff only, HTMX)."""
     if not (request.user.is_authenticated and request.user.is_staff):
         return HttpResponse("No autorizado", status=401)
     
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-    
     from apps.social_posts.models import SocialPost
-    post = get_object_or_404(SocialPost, id=post_id)
+    post = get_object_or_404(SocialPost.objects.select_related('story'), id=post_id)
     
     post.status = 'accepted'
     post.save(update_fields=['status', 'updated_at'])
     
-    if request.headers.get('HX-Request'):
+    if request.headers.get('HX-Request') == 'true':
         return render(request, 'stories/social_post_action_partial.html', {
             'post': post,
             'action_message': 'Borrador aprobado y listo para publicar.',
             'action_type': 'saved',
         })
-    return redirect('stories:story-detail', pk=post.extraction.story.id)
+    return redirect('stories:story-detail', pk=post.story_id)
 
 
+@require_POST
 def reject_social_post(request, post_id):
     """Reject an approved social media post and return to draft (staff only, HTMX)."""
     if not (request.user.is_authenticated and request.user.is_staff):
         return HttpResponse("No autorizado", status=401)
     
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-    
     from apps.social_posts.models import SocialPost
-    post = get_object_or_404(SocialPost, id=post_id)
+    post = get_object_or_404(SocialPost.objects.select_related('story'), id=post_id)
     
     post.status = 'draft'
     post.save(update_fields=['status', 'updated_at'])
     
-    if request.headers.get('HX-Request'):
+    if request.headers.get('HX-Request') == 'true':
         return render(request, 'stories/social_post_action_partial.html', {
             'post': post,
             'action_message': 'Borrador devuelto a edición.',
             'action_type': 'regenerated',
         })
-    return redirect('stories:story-detail', pk=post.extraction.story.id)
-
-
-def story_audio_status(request, pk):
-    """Retorna el estado actual de la generación de audio (HTMX polling)."""
-    story = get_object_or_404(Story, pk=pk)
-    return render(request, 'stories/story_audio_partial.html', {
-        'story': story,
-    })
-
-
-def regenerate_story_audio(request, pk):
-    """Permite al administrador regenerar el audio de una historia (staff only, HTMX)."""
-    if not (request.user.is_authenticated and request.user.is_staff):
-        return HttpResponse("No autorizado", status=401)
-        
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-        
-    story = get_object_or_404(Story, pk=pk)
-    story.audio_status = 'pending'
-    story.audio_error = ''
-    story.save(update_fields=['audio_status', 'audio_error'])
-    
-    try:
-        from apps.stories.tasks import generate_story_audio_task
-        generate_story_audio_task.delay(story.id)
-    except Exception as e:
-        story.audio_status = 'failed'
-        story.audio_error = f"No se pudo encolar la tarea: {e}"
-        story.save(update_fields=['audio_status', 'audio_error'])
-        
-    if request.headers.get('HX-Request'):
-        return render(request, 'stories/story_audio_partial.html', {
-            'story': story,
-            'info_message': 'Generación de audio reiniciada.',
-        })
-    return redirect('stories:story-detail', pk=story.id)
-
-
+    return redirect('stories:story-detail', pk=post.story_id)

@@ -135,7 +135,6 @@ class Command(BaseCommand):
                     category=category,
                     status='published',
                     published_at=timezone.now(),
-                    extraction_status='completed',
                     **story_data
                 )
                 created_count += 1

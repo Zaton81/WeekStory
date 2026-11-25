@@ -1,20 +1,28 @@
 def global_context(request):
     """
-    Inyecta datos globales en las plantillas:
+    Inyecta datos globales en las plantillas completas (no en parciales HTMX):
     - Categorías de historias
     - Páginas legales activas
     - Perfiles de redes sociales configurados
     - Banners publicitarios activos por su posición
     - Páginas personales activas (navbar)
     """
+    # Evitar consultas globales redundantes en peticiones parciales HTMX
+    if request.headers.get('HX-Request') == 'true':
+        return {}
+
+    from django.db.models import Count, Q
     from apps.stories.models import Category, Banner
     from apps.legal.models import LegalPage
     from apps.social_links.models import SocialNetwork
     from apps.pages.models import Page
 
-    # Manejo de excepciones para evitar fallos cuando no se han ejecutado las migraciones aún
     try:
-        categories = list(Category.objects.all())
+        categories = list(
+            Category.objects.annotate(
+                published_stories_count=Count('stories', filter=Q(stories__status='published'))
+            )
+        )
         active_banners = list(Banner.objects.filter(is_active=True))
         banner_arriba = next((b for b in active_banners if b.position == 'arriba'), None)
         banner_abajo = next((b for b in active_banners if b.position == 'abajo'), None)

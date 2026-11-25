@@ -1,5 +1,5 @@
 {% if results %}
-<div class="search-results-dropdown">
+<div class="search-results-dropdown" aria-live="polite">
     {% for story in results %}
         <a href="{% url 'stories:story-detail' story.id %}" class="search-result-item">
             <i class="fa-solid fa-feather-pointed" style="color: hsl(var(--secondary)); font-size: 0.8rem;"></i>
